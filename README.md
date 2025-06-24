@@ -1,6 +1,6 @@
 # Desktop-AI Auto-Start Setup
 
-This project is designed to run automatically on Raspberry Pi startup. The scripts will ensure your code is always up-to-date, dependencies are installed, and your main Python application runs after every boot.
+This project is designed to run automatically on Raspberry Pi startup using a systemd service. The scripts will ensure your code is always up-to-date, dependencies are installed, and your main Python application runs after every boot.
 
 ## Setup Instructions
 
@@ -16,7 +16,8 @@ This project is designed to run automatically on Raspberry Pi startup. The scrip
    ```
    - This will:
      - Make `start.sh` executable
-     - Add a `crontab` entry to run `start.sh` on every reboot
+     - Create a `desktop-ai.service` systemd unit file
+     - Install and enable the systemd service to run `start.sh` after boot and after the network is online
 
 3. **Reboot to test:**
    ```sh
@@ -24,16 +25,33 @@ This project is designed to run automatically on Raspberry Pi startup. The scrip
    ```
 
 ## What Happens on Boot?
-- The `start.sh` script will:
-  1. Pull the latest code from the `main` branch
-  2. Create and activate a Python virtual environment at `~/venv` if it doesn't exist
-  3. Install dependencies from `requirements.txt` (if present)
-  4. Run `main.py` from your repo directory
-  5. Log all actions to `startup.log` in the repo root
+- The `desktop-ai.service` systemd service will:
+  1. Wait for the network to be online
+  2. Run `start.sh` from your repo directory
+  3. `start.sh` will:
+     - Pull the latest code from the `main` branch
+     - Create and activate a Python virtual environment at `~/venv` if it doesn't exist
+     - Install dependencies from `requirements.txt` (if present)
+     - Run `main.py` from your repo directory
+     - Log all actions to `startup.log` in the repo root
 
 ## Logs
 - Setup actions: `setup.log`
 - Startup actions and errors: `startup.log`
+
+## Managing the Service
+- Check status:
+  ```sh
+  systemctl status desktop-ai.service
+  ```
+- View logs:
+  ```sh
+  tail -f ~/Desktop-AI/startup.log
+  ```
+- Restart the service:
+  ```sh
+  sudo systemctl restart desktop-ai.service
+  ```
 
 ## Notes
 - Make sure your `main.py` and `requirements.txt` are in the repo root as referenced in the scripts.

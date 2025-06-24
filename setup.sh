@@ -2,6 +2,8 @@
 
 REPO_DIR="$HOME/Desktop-AI"
 START_SCRIPT="$REPO_DIR/start.sh"
+SERVICE_FILE="desktop-ai.service"
+SYSTEMD_PATH="/etc/systemd/system/$SERVICE_FILE"
 LOG_FILE="$REPO_DIR/setup.log"
 
 log() {
@@ -19,15 +21,42 @@ else
     exit 1
 fi
 
-# Add crontab entry if not present
-CRON_CMD="@reboot /bin/bash $START_SCRIPT"
-crontab -l 2>/dev/null | grep -F "$CRON_CMD" > /dev/null
-if [ $? -ne 0 ]; then
-    (crontab -l 2>/dev/null; echo "$CRON_CMD") | crontab -
-    log "Added @reboot crontab entry."
+# Create systemd service file
+cat > "$REPO_DIR/$SERVICE_FILE" <<EOL
+[Unit]
+Description=Desktop-AI Auto Start
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=$REPO_DIR
+ExecStart=/bin/bash $START_SCRIPT
+Restart=on-failure
+StandardOutput=append:$REPO_DIR/startup.log
+StandardError=append:$REPO_DIR/startup.log
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+log "Created $SERVICE_FILE in repo root."
+
+# Copy service file to systemd
+sudo cp "$REPO_DIR/$SERVICE_FILE" "$SYSTEMD_PATH"
+if [ $? -eq 0 ]; then
+    log "Copied $SERVICE_FILE to $SYSTEMD_PATH."
 else
-    log "Crontab entry already exists."
+    log "ERROR: Failed to copy $SERVICE_FILE to $SYSTEMD_PATH."
+    exit 1
 fi
+
+# Reload systemd, enable and start the service
+sudo systemctl daemon-reload
+sudo systemctl enable $SERVICE_FILE
+sudo systemctl restart $SERVICE_FILE
+log "Systemd service enabled and started."
 
 log "Setup complete."
 
