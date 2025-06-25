@@ -1,4 +1,6 @@
 RPi.GPIO
 numpy
 scipy
-sounddevice 
+sounddevice
+openai
+python-dotenv 
