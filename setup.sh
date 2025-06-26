@@ -63,7 +63,15 @@ systemctl enable $SERVICE_FILE
 systemctl restart $SERVICE_FILE
 log "Systemd service enabled and started."
 
-# Always run WiFi configuration script
-bash /home/pi/Desktop-AI/add_wifi.sh
+# Set 'preconfigured' connection to priority 20
+sudo nmcli connection modify preconfigured connection.autoconnect-priority 20
+
+echo -e "\nWould you like to add a new WiFi network?\nPress Enter to continue, or press Escape to skip."
+read -n 1 key
+if [[ $key == $'\e' ]]; then
+  echo -e "\nSkipping WiFi network addition."
+else
+  bash /home/pi/Desktop-AI/add_wifi.sh
+fi
 
 log "Setup complete."

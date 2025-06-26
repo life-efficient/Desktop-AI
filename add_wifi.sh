@@ -1,16 +1,6 @@
 #!/bin/bash
 
-# Set 'preconfigured' connection to priority 20
-sudo nmcli connection modify preconfigured connection.autoconnect-priority 20
-
-echo -e "\nWould you like to add a new WiFi network?\nPress Enter to continue, or press Escape to skip."
-read -n 1 key
-if [[ $key == $'\e' ]]; then
-  echo -e "\nSkipping WiFi network addition."
-  exit 0
-fi
-
-echo "\nEnter WiFi SSID: "
+echo "Enter WiFi SSID: "
 read SSID
 if [ -z "$SSID" ]; then
   echo "SSID cannot be empty. Exiting."
