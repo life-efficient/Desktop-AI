@@ -1,6 +1,6 @@
 # Desktop-AI Auto-Start Setup
 
-This project is designed to run automatically on Raspberry Pi startup using a systemd service. The scripts will ensure your code is always up-to-date, dependencies are installed, and your main Python application runs after every boot. The Python script is run on boot.
+This project is designed to run automatically on Raspberry Pi startup using a systemd service. The scripts will ensure your code is always up-to-date, dependencies are installed, and your main Python application runs after every boot.
 
 ## Setup Instructions
 
@@ -12,24 +12,33 @@ This project is designed to run automatically on Raspberry Pi startup using a sy
 
 2. **Run the setup script:**
    ```sh
-   bash setup.sh
+   sudo bash setup.sh
    ```
    - This will:
-     - Make `start.sh` executable
-     - Create a `desktop-ai.service` systemd unit file
-     - Install and enable the systemd service to run `start.sh` after boot and after the network is online
+     - Install all required system and Python dependencies
+     - Set up the systemd service to run your app after boot
+     - Set the "preconfigured" WiFi connection profile to priority 20 (highest)
+     - Prompt you to optionally add a new WiFi network using `nmcli` (press Enter to add, Escape to skip)
 
-1. Set your env API keys
-```
-OPENAI_KEY=
-```
-
-1. Set your wifi
-
-1. **Reboot to test:**
+3. **Reboot to test:**
    ```sh
    sudo reboot
    ```
+
+## Adding or Modifying WiFi Networks
+
+- All WiFi configuration is now managed via **NetworkManager** (`nmcli`).
+- To add a new WiFi network at any time, run:
+  ```sh
+  bash add_wifi.sh
+  ```
+  - This will prompt for SSID, password, and optional priority, and add or update the network using `nmcli`.
+  - The "preconfigured" network's priority is not changed by this script (only by setup.sh).
+
+- To change the priority of an existing network:
+  ```sh
+  sudo nmcli connection modify "<ConnectionName>" connection.autoconnect-priority <number>
+  ```
 
 ## What Happens on Boot?
 - The `desktop-ai.service` systemd service will:
@@ -37,7 +46,7 @@ OPENAI_KEY=
   2. Run `start.sh` from your repo directory
   3. `start.sh` will:
      - Pull the latest code from the `main` branch
-     - Create and activate a Python virtual environment at `~/venv` if it doesn't exist
+     - Create and activate a Python virtual environment at `/home/pi/venv` if it doesn't exist
      - Install dependencies from `requirements.txt` (if present)
      - Run `main.py` from your repo directory
      - Log all actions to `startup.log` in the repo root
@@ -62,4 +71,5 @@ OPENAI_KEY=
 
 ## Notes
 - Make sure your `main.py` and `requirements.txt` are in the repo root as referenced in the scripts.
+- All WiFi configuration is now managed via `nmcli` and NetworkManager, not wpa_supplicant.conf.
 - You can edit the scripts to change paths or behavior as needed. 
