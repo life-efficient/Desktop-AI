@@ -74,7 +74,7 @@ else
 fi
 
 mkdir -p /home/pi/desktop-ai-logs
-chown pi:pi /home/pi/desktop-ai-logs
+chown -R pi:pi /home/pi/desktop-ai-logs
 
 # Prompt for OpenAI API key and write to .env
 if [ -f "$REPO_DIR/.env" ]; then
