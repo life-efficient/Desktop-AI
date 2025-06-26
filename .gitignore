@@ -1,0 +1,25 @@
+# Logs
+startup.log
+setup.log
+debug_git.log
+
+# Audio files
+recording.wav
+response.wav
+
+# Ignore audio files in sounds/ but keep the directory
+sounds/*.wav
+sounds/*.mp3
+sounds/*.m4a
+!sounds/
+
+# Python virtual environment
+venv/
+
+# Temporary files
+*.tmp
+*.log
+
+# Other runtime/generated files
+recordings/
+responses/ 
