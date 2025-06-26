@@ -22,4 +22,7 @@ venv/
 
 # Other runtime/generated files
 recordings/
-responses/ 
+responses/
+
+# Environment variables
+.env 
