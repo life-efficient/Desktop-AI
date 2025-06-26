@@ -254,6 +254,8 @@ recording = []
 stream = None
 playback_process = None
 
+play_audio(Path(__file__).parent / "sounds" / "Bloop.wav")
+
 try:
     while True:
         button_is_down = GPIO.input(BUTTON_PIN) == GPIO.LOW
