@@ -19,6 +19,7 @@ fi
 
 # Pull latest code
 git -C "$REPO_DIR" pull origin main >> "$LOGFILE" 2>&1
+sync
 if [ $? -ne 0 ]; then
     log "ERROR: git pull failed."
     exit 1
