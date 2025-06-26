@@ -19,7 +19,14 @@ This project is designed to run automatically on Raspberry Pi startup using a sy
      - Create a `desktop-ai.service` systemd unit file
      - Install and enable the systemd service to run `start.sh` after boot and after the network is online
 
-3. **Reboot to test:**
+1. Set your env API keys
+```
+OPENAI_KEY=
+```
+
+1. Set your wifi
+
+1. **Reboot to test:**
    ```sh
    sudo reboot
    ```

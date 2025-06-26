@@ -63,4 +63,7 @@ systemctl enable $SERVICE_FILE
 systemctl restart $SERVICE_FILE
 log "Systemd service enabled and started."
 
+# Always run WiFi configuration script
+bash /home/pi/Desktop-AI/add_wifi.sh
+
 log "Setup complete."
