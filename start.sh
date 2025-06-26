@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Set up variables
-REPO_DIR="$HOME/Desktop-AI"
-VENV_DIR="$HOME/venv"
+REPO_DIR="/home/pi/Desktop-AI"
+VENV_DIR="/home/pi/venv"
 LOG_FILE="$REPO_DIR/startup.log"
 
 log() {

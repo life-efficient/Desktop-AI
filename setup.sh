@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REPO_DIR="$HOME/Desktop-AI"
+REPO_DIR="/home/pi/Desktop-AI"
 START_SCRIPT="$REPO_DIR/start.sh"
 SERVICE_FILE="desktop-ai.service"
 SYSTEMD_PATH="/etc/systemd/system/$SERVICE_FILE"
@@ -30,12 +30,12 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=$USER
-WorkingDirectory=$REPO_DIR
-ExecStart=/bin/bash $START_SCRIPT
+User=pi
+WorkingDirectory=/home/pi/Desktop-AI
+ExecStart=/bin/bash /home/pi/Desktop-AI/start.sh
 Restart=on-failure
-StandardOutput=append:$REPO_DIR/startup.log
-StandardError=append:$REPO_DIR/startup.log
+StandardOutput=append:/home/pi/Desktop-AI/startup.log
+StandardError=append:/home/pi/Desktop-AI/startup.log
 
 [Install]
 WantedBy=multi-user.target
