@@ -26,7 +26,7 @@ chmod +x "$START_SCRIPT"
 log "Made start.sh executable."
 
 # 4. Create systemd service file
-cat > "$REPO_DIR/$SERVICE_FILE" <<EOL
+cat > "$SYSTEMD_PATH" <<EOL
 [Unit]
 Description=Desktop-AI Auto Start
 After=network-online.target
@@ -47,11 +47,7 @@ StandardError=append:/home/pi/Desktop-AI/startup.log
 WantedBy=multi-user.target
 EOL
 
-log "Created $SERVICE_FILE in repo root."
-
-# 5. Move service file to systemd
-mv "$REPO_DIR/$SERVICE_FILE" "$SYSTEMD_PATH"
-log "Moved $SERVICE_FILE to $SYSTEMD_PATH."
+log "Created $SERVICE_FILE directly at $SYSTEMD_PATH."
 
 # 6. Set ownership of all files and venv to pi
 chown -R pi:pi /home/pi/Desktop-AI
