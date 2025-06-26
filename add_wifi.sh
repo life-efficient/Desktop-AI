@@ -1,39 +1,41 @@
 #!/bin/bash
 
-CONF_FILE="/etc/wpa_supplicant/wpa_supplicant.conf"
-BACKUP_FILE="/etc/wpa_supplicant/wpa_supplicant.conf.bak.$(date +%s)"
+# Set 'preconfigured' connection to priority 20
+sudo nmcli connection modify preconfigured connection.autoconnect-priority 20
 
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root (use sudo)"
-  exit 1
-fi
-
-read -p "Enter WiFi SSID: " SSID
+echo "Enter WiFi SSID: "
+read SSID
 if [ -z "$SSID" ]; then
   echo "SSID cannot be empty. Exiting."
   exit 1
 fi
 
-read -s -p "Enter WiFi Password: " PSK
+echo "Enter WiFi Password: "
+read -s PSK
 echo
 if [ -z "$PSK" ]; then
   echo "Password cannot be empty. Exiting."
   exit 1
 fi
 
-read -p "Enter priority (optional, press Enter to skip): " PRIORITY
-
-# Backup the config file
-cp "$CONF_FILE" "$BACKUP_FILE"
-echo "Backup of config saved to $BACKUP_FILE"
-
-# Build the network block
-NETWORK_BLOCK="network={\n    ssid=\"$SSID\"\n    psk=\"$PSK\""
-if [ -n "$PRIORITY" ]; then
-  NETWORK_BLOCK+="\n    priority=$PRIORITY"
+echo "Enter priority (optional, press Enter for default 10): "
+read PRIORITY
+if [ -z "$PRIORITY" ]; then
+  PRIORITY=10
 fi
-NETWORK_BLOCK+="\n}"
 
-# Append to the config file
-echo -e "$NETWORK_BLOCK" >> "$CONF_FILE"
-echo "Added WiFi network $SSID to $CONF_FILE" 
+# Check if connection profile already exists
+PROFILE_EXISTS=$(sudo nmcli -t -f NAME connection show | grep -Fx "$SSID")
+
+if [ -n "$PROFILE_EXISTS" ]; then
+  echo "Updating existing connection profile for $SSID."
+  sudo nmcli connection modify "$SSID" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PSK" connection.autoconnect-priority "$PRIORITY"
+else
+  echo "Adding new connection profile for $SSID."
+  sudo nmcli connection add type wifi ifname wlan0 con-name "$SSID" ssid "$SSID"
+  sudo nmcli connection modify "$SSID" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PSK" connection.autoconnect-priority "$PRIORITY"
+fi
+
+echo "Bringing up connection to $SSID..."
+sudo nmcli connection up "$SSID"
+echo "Done." 
