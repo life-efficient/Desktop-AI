@@ -49,9 +49,9 @@ EOL
 
 log "Created $SERVICE_FILE in repo root."
 
-# 5. Copy service file to systemd
-cp "$REPO_DIR/$SERVICE_FILE" "$SYSTEMD_PATH"
-log "Copied $SERVICE_FILE to $SYSTEMD_PATH."
+# 5. Move service file to systemd
+mv "$REPO_DIR/$SERVICE_FILE" "$SYSTEMD_PATH"
+log "Moved $SERVICE_FILE to $SYSTEMD_PATH."
 
 # 6. Set ownership of all files and venv to pi
 chown -R pi:pi /home/pi/Desktop-AI
