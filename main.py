@@ -138,8 +138,8 @@ def disable_speaker():
     print("Disabling speaker.")
     GPIO.output(SPEAKER_SHUTDOWN_PIN, GPIO.LOW)
 
-RECORDING_FILE = Path(__file__).parent / "recording.wav"
-RESPONSE_AUDIO_FILE = Path(__file__).parent / "response.wav"
+RECORDING_FILE = Path("/tmp/recording.wav")
+RESPONSE_AUDIO_FILE = Path("/tmp/response.wav")
 SAMPLERATE = 48000
 CHANNELS = 1
 
@@ -255,6 +255,8 @@ stream = None
 playback_process = None
 
 play_audio(Path(__file__).parent / "sounds" / "Bloop.wav")
+
+LOGFILE = "/home/pi/desktop-ai-logs/main.log"
 
 try:
     while True:

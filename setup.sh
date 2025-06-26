@@ -77,4 +77,7 @@ else
   bash /home/pi/Desktop-AI/add_wifi.sh
 fi
 
+mkdir -p /home/pi/desktop-ai-logs
+chown pi:pi /home/pi/desktop-ai-logs
+
 log "Setup complete."
