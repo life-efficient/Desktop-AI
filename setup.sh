@@ -53,11 +53,14 @@ log "Created $SERVICE_FILE in repo root."
 cp "$REPO_DIR/$SERVICE_FILE" "$SYSTEMD_PATH"
 log "Copied $SERVICE_FILE to $SYSTEMD_PATH."
 
-# 6. Set ownership of all files to pi
+# 6. Set ownership of all files and venv to pi
 chown -R pi:pi /home/pi/Desktop-AI
 chown -R pi:pi /home/pi/venv
 
-# 7. Reload systemd, enable and start the service
+# 7. Remove any root-owned log file
+rm -f /home/pi/Desktop-AI/startup.log
+
+# 8. Reload and restart the systemd service
 systemctl daemon-reload
 systemctl enable $SERVICE_FILE
 systemctl restart $SERVICE_FILE
