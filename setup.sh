@@ -80,4 +80,26 @@ fi
 mkdir -p /home/pi/desktop-ai-logs
 chown pi:pi /home/pi/desktop-ai-logs
 
+# Prompt for OpenAI API key and write to .env
+if [ -f "$REPO_DIR/.env" ]; then
+    echo -e "\n.env file already exists. Press Enter to overwrite the OpenAI API key, or press Escape to skip."
+    read -n 1 key
+    if [[ $key == $'\e' ]]; then
+        echo -e "\nSkipping OpenAI API key update."
+        log "Skipped OpenAI API key update."
+    else
+        echo -n "\nEnter your OpenAI API key: "
+        read -r OPENAI_API_KEY
+        echo "OPENAI_API_KEY=$OPENAI_API_KEY" > "$REPO_DIR/.env"
+        chown pi:pi "$REPO_DIR/.env"
+        log "Overwrote .env file with new OpenAI API key."
+    fi
+else
+    echo -n "Enter your OpenAI API key: "
+    read -r OPENAI_API_KEY
+    echo "OPENAI_API_KEY=$OPENAI_API_KEY" > "$REPO_DIR/.env"
+    chown pi:pi "$REPO_DIR/.env"
+    log "Created .env file with OpenAI API key."
+fi
+
 log "Setup complete."
