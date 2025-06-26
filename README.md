@@ -1,6 +1,6 @@
 # Desktop-AI Auto-Start Setup
 
-This project is designed to run automatically on Raspberry Pi startup using a systemd service. The scripts will ensure your code is always up-to-date, dependencies are installed, and your main Python application runs after every boot.
+This project is designed to run automatically on Raspberry Pi startup using a systemd service. The scripts will ensure your code is always up-to-date, dependencies are installed, and your main Python application runs after every boot. The Python script is run on boot.
 
 ## Setup Instructions
 
