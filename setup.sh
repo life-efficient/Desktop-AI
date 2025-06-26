@@ -40,8 +40,8 @@ Environment=USER=pi
 WorkingDirectory=/home/pi/Desktop-AI
 ExecStart=/bin/bash /home/pi/Desktop-AI/start.sh
 Restart=on-failure
-StandardOutput=append:/home/pi/Desktop-AI/startup.log
-StandardError=append:/home/pi/Desktop-AI/startup.log
+StandardOutput=append:/home/pi/desktop-ai-logs/startup.log
+StandardError=append:/home/pi/desktop-ai-logs/startup.log
 
 [Install]
 WantedBy=multi-user.target
@@ -54,7 +54,7 @@ chown -R pi:pi /home/pi/Desktop-AI
 chown -R pi:pi /home/pi/venv
 
 # 7. Remove any root-owned log file
-rm -f /home/pi/Desktop-AI/startup.log
+rm -f /home/pi/desktop-ai-logs/startup.log
 
 # 8. Reload and restart the systemd service
 systemctl daemon-reload
