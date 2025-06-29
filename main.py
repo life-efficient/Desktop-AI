@@ -296,6 +296,9 @@ try:
                 write(RECORDING_FILE, SAMPLERATE, audio)
                 print(f"Saved to {RECORDING_FILE}")
                 
+                # Play Drip sound after button release
+                play_audio(Path(__file__).parent / "sounds" / "Drip.wav")
+                
                 # Transcribe the recorded audio
                 print("Transcribing audio...")
                 transcription = transcribe_audio(RECORDING_FILE)
