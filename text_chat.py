@@ -1,5 +1,5 @@
 import sys
-from main import ConversationManager
+from conversation_manager import ConversationManager
 
 
 def main():

@@ -10,6 +10,7 @@ from pathlib import Path
 import subprocess
 import threading
 import math
+from conversation_manager import ConversationManager
 
 # Load environment variables from .env file
 load_dotenv()
@@ -142,52 +143,6 @@ RECORDING_FILE = Path("/tmp/recording.wav")
 RESPONSE_AUDIO_FILE = Path("/tmp/response.wav")
 SAMPLERATE = 48000
 CHANNELS = 1
-
-class ConversationManager:
-    def __init__(self):
-        self.messages = [{
-            "role": "system",
-            "content": "You are a helpful assistant engaging in a voice conversation. Keep your responses clear and concise."
-        }]
-    
-    def add_message(self, role, content):
-        """Add a message to the conversation history"""
-        self.messages.append({"role": role, "content": content})
-    
-    def generate_response(self):
-        """Generate a response using the conversation history"""
-        try:
-            response = client.responses.create(
-                model="gpt-4.1-mini",
-                input=self.messages,
-            )
-            outputs = response.output
-            # Extract the assistant's text from the output structure
-            response_text = None
-            if outputs and isinstance(outputs, list):
-                for item in outputs:
-                    if (
-                        item.get("role") == "assistant"
-                        and item.get("content")
-                        and isinstance(item["content"], list)
-                    ):
-                        for content_item in item["content"]:
-                            if (
-                                content_item.get("type") == "output_text"
-                                and "text" in content_item
-                            ):
-                                response_text = content_item["text"]
-                                break
-                        if response_text:
-                            break
-            if not response_text:
-                print("No assistant text found in response output.")
-                return None
-            self.add_message("assistant", response_text)
-            return response_text
-        except Exception as e:
-            print(f"Error generating response: {e}")
-            return None
 
 def transcribe_audio(audio_file):
     """
