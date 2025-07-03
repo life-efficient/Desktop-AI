@@ -7,12 +7,6 @@ debug_git.log
 recording.wav
 response.wav
 
-# Ignore audio files in sounds/ but keep the directory
-sounds/*.wav
-sounds/*.mp3
-sounds/*.m4a
-!sounds/
-
 # Python virtual environment
 venv/
 
@@ -31,4 +25,7 @@ responses/
 __pycache__/
 
 # Custom virtual environment
-desktop-ai-venv/ 
+desktop-ai-venv/
+
+# macOS Finder metadata
+.DS_Store 
