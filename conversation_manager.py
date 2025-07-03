@@ -2,6 +2,7 @@ import os
 from openai import OpenAI
 from pathlib import Path
 from dotenv import load_dotenv
+from tools import tools
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,6 +29,7 @@ class ConversationManager:
             response = client.responses.create(
                 model="gpt-4.1-mini",
                 input=self.messages,
+                tools=tools,
             )
             outputs = response.output
             # Extract the assistant's text from the output structure (using attribute access)

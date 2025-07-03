@@ -7,7 +7,7 @@ tools = [
     {
         "type": "mcp",
         "server_label": "google_calendar",
-        "server_url": "http://127.0.0.1:3000",
+        "server_url": "https://99ae-86-60-114-67.ngrok-free.app",
         # Optionally, you can specify allowed_tools, headers, or require_approval here
         # "allowed_tools": ["list_events", "create_event", "delete_event"],
         # "headers": {"Authorization": "Bearer <token>"},
