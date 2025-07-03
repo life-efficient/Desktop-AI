@@ -3,6 +3,7 @@ from openai import OpenAI
 from pathlib import Path
 from dotenv import load_dotenv
 from tools import tools
+from pprint import pprint
 
 # Load environment variables from .env file
 load_dotenv()
@@ -32,6 +33,7 @@ class ConversationManager:
                 tools=tools,
             )
             outputs = response.output
+            # pprint(outputs, indent=4)
             # Extract the assistant's text from the output structure (using attribute access)
             response_text = None
             if outputs and isinstance(outputs, list):
