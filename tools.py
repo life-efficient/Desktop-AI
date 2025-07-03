@@ -7,7 +7,7 @@ tools = [
     {
         "type": "mcp",
         "server_label": "google_calendar",
-        "server_url": "https://99ae-86-60-114-67.ngrok-free.app",
+        "server_url": "https://8810-86-60-114-67.ngrok-free.app",
         "require_approval": "never",
         "allowed_tools": [
             "list-calendars",
