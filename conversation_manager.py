@@ -40,10 +40,21 @@ class ConversationManager:
                     and ("Error code: 424" in e.args[0] or "424" in str(e))
                     and ("Error retrieving tool list from MCP server" in e.args[0] or "tool list" in str(e))
                 ):
-                    print("MCP server unavailable, retrying without tools...")
+                    print("MCP server unavailable, retrying without that server's tools...")
+                    # Filter out the Google Calendar MCP server from the tools list
+                    filtered_tools = [
+                        t for t in tools
+                        if not (t.get("type") == "mcp" and t.get("server_label") == "google_calendar")
+                    ] if tools else None
+                    # Add a message to the conversation context
+                    self.add_message(
+                        "system",
+                        "Note: The Google Calendar tools are temporarily unavailable due to a server issue. Calendar-related actions will not work until the server is restored."
+                    )
                     response = client.responses.create(
                         model="gpt-4.1-mini",
                         input=self.messages,
+                        tools=filtered_tools if filtered_tools else None,
                     )
                 else:
                     raise
