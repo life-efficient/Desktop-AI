@@ -72,4 +72,50 @@ This project is designed to run automatically on Raspberry Pi startup using a sy
 ## Notes
 - Make sure your `main.py` and `requirements.txt` are in the repo root as referenced in the scripts.
 - All WiFi configuration is now managed via `nmcli` and NetworkManager, not wpa_supplicant.conf.
-- You can edit the scripts to change paths or behavior as needed. 
+- You can edit the scripts to change paths or behavior as needed.
+
+## Useful nmcli WiFi Commands
+
+Here are some handy `nmcli` commands for managing WiFi networks on your Raspberry Pi:
+
+- **List all known (saved) WiFi networks:**
+  ```sh
+  nmcli connection show
+  ```
+
+- **List available WiFi networks in range:**
+  ```sh
+  nmcli device wifi list
+  ```
+
+- **Show details for a specific connection:**
+  ```sh
+  nmcli connection show "<ConnectionName>"
+  ```
+
+- **Connect to a known WiFi network:**
+  ```sh
+  nmcli connection up "<ConnectionName>"
+  ```
+
+- **Disconnect from a WiFi network:**
+  ```sh
+  nmcli connection down "<ConnectionName>"
+  ```
+
+- **Delete a saved WiFi network:**
+  ```sh
+  nmcli connection delete "<ConnectionName>"
+  ```
+
+- **Change the priority of a WiFi network:**
+  ```sh
+  sudo nmcli connection modify "<ConnectionName>" connection.autoconnect-priority <number>
+  ```
+
+- **Rescan for WiFi networks:**
+  ```sh
+  nmcli device wifi rescan
+  ```
+
+Replace `<ConnectionName>` with the name of your WiFi connection as shown in the output of `nmcli connection show`. 

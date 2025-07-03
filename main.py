@@ -157,12 +157,32 @@ class ConversationManager:
     def generate_response(self):
         """Generate a response using the conversation history"""
         try:
-            response = client.chat.completions.create(
+            response = client.responses.create(
                 model="gpt-4.1-mini",
-                messages=self.messages,
-                max_tokens=150  # Adjust for desired response length
+                input=self.messages,
             )
-            response_text = response.choices[0].message.content
+            outputs = response.output
+            # Extract the assistant's text from the output structure
+            response_text = None
+            if outputs and isinstance(outputs, list):
+                for item in outputs:
+                    if (
+                        item.get("role") == "assistant"
+                        and item.get("content")
+                        and isinstance(item["content"], list)
+                    ):
+                        for content_item in item["content"]:
+                            if (
+                                content_item.get("type") == "output_text"
+                                and "text" in content_item
+                            ):
+                                response_text = content_item["text"]
+                                break
+                        if response_text:
+                            break
+            if not response_text:
+                print("No assistant text found in response output.")
+                return None
             self.add_message("assistant", response_text)
             return response_text
         except Exception as e:
