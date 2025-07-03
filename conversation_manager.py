@@ -26,6 +26,7 @@ class ConversationManager:
     
     def generate_response(self):
         """Generate a response using the conversation history"""
+        global tools
         try:
             try:
                 response = client.responses.create(
@@ -46,6 +47,8 @@ class ConversationManager:
                         t for t in tools
                         if not (t.get("type") == "mcp" and t.get("server_label") == "google_calendar")
                     ] if tools else None
+                    # Update the global tools variable so it's not retried again
+                    tools = filtered_tools if filtered_tools else None
                     # Add a message to the conversation context
                     self.add_message(
                         "system",
@@ -54,7 +57,7 @@ class ConversationManager:
                     response = client.responses.create(
                         model="gpt-4.1-mini",
                         input=self.messages,
-                        tools=filtered_tools if filtered_tools else None,
+                        tools=tools,
                     )
                 else:
                     raise
