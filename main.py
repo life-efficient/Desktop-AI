@@ -306,7 +306,9 @@ try:
 
         time.sleep(0.01)
 
-except KeyboardInterrupt:
+except Exception as e:
+    print(f"Error: {e}")
+    play_audio(Path(__file__).parent / "sounds" / "Error.wav")
     led.cleanup()  # Clean up LED resources
     stop_audio_playback() # Ensure audio is stopped
     GPIO.cleanup()
