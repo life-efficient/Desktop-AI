@@ -25,4 +25,10 @@ recordings/
 responses/
 
 # Environment variables
-.env 
+.env
+
+# Python bytecode
+__pycache__/
+
+# Custom virtual environment
+desktop-ai-venv/ 
