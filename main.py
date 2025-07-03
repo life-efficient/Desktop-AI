@@ -213,6 +213,14 @@ def stop_audio_playback():
         return True
     return False
 
+def cleanup():
+    print(f"Error: {e}")
+    play_audio(Path(__file__).parent / "sounds" / "Error.wav")
+    led.cleanup()  # Clean up LED resources
+    stop_audio_playback() # Ensure audio is stopped
+    GPIO.cleanup()
+    print("Exiting")
+
 # Initialize conversation manager and LED controller
 conversation = ConversationManager()
 led = LEDPatternController(LED_PIN)
@@ -306,10 +314,8 @@ try:
 
         time.sleep(0.01)
 
+except KeyboardInterrupt:
+    cleanup()
+
 except Exception as e:
-    print(f"Error: {e}")
-    play_audio(Path(__file__).parent / "sounds" / "Error.wav")
-    led.cleanup()  # Clean up LED resources
-    stop_audio_playback() # Ensure audio is stopped
-    GPIO.cleanup()
-    print("Exiting")
+    cleanup(e)
