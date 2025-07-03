@@ -27,13 +27,27 @@ class ConversationManager:
     def generate_response(self):
         """Generate a response using the conversation history"""
         try:
-            response = client.responses.create(
-                model="gpt-4.1-mini",
-                input=self.messages,
-                tools=tools,
-            )
+            try:
+                response = client.responses.create(
+                    model="gpt-4.1-mini",
+                    input=self.messages,
+                    tools=tools,
+                )
+            except Exception as e:
+                # Check for MCP server down error (error code 424 and tool list retrieval message)
+                if (
+                    hasattr(e, "args") and e.args and isinstance(e.args[0], str)
+                    and ("Error code: 424" in e.args[0] or "424" in str(e))
+                    and ("Error retrieving tool list from MCP server" in e.args[0] or "tool list" in str(e))
+                ):
+                    print("MCP server unavailable, retrying without tools...")
+                    response = client.responses.create(
+                        model="gpt-4.1-mini",
+                        input=self.messages,
+                    )
+                else:
+                    raise
             outputs = response.output
-            # pprint(outputs, indent=4)
             # Extract the assistant's text from the output structure (using attribute access)
             response_text = None
             if outputs and isinstance(outputs, list):
