@@ -60,7 +60,7 @@ fi
 # Run main.py
 if [ -f "$REPO_DIR/main.py" ]; then
     log "Running main.py."
-    python "$REPO_DIR/main.py" >> "$LOGFILE" 2>&1
+    python -u "$REPO_DIR/main.py" >> "$LOGFILE" 2>&1
     log "main.py finished."
 else
     log "ERROR: main.py not found at $REPO_DIR."
