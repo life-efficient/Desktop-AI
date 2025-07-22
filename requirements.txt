@@ -4,3 +4,4 @@ scipy
 sounddevice
 openai
 python-dotenv 
+requests

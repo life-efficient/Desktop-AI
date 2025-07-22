@@ -18,6 +18,7 @@ if not client.api_key:
 
 # Set the model to use for all responses
 model = "gpt-4.1-nano"
+print(tools)
 
 class ConversationManager:
     def __init__(self):
