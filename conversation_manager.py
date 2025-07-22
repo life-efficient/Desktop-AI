@@ -39,7 +39,7 @@ class ConversationManager:
                 response = client.responses.create(
                     model=model,
                     input=self.messages,
-                    # tools=tools,
+                    tools=tools,
                 )
             except Exception as e:
                 # Check for MCP server down error (error code 424 and tool list retrieval message)
