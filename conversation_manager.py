@@ -4,14 +4,20 @@ from pathlib import Path
 from dotenv import load_dotenv
 from tools import tools
 from pprint import pprint
+from logging_util import get_logger
 
 # Load environment variables from .env file
 load_dotenv()
+
+logger = get_logger(__name__)
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 if not client.api_key:
     raise ValueError("OPENAI_API_KEY not found in .env file")
+
+# Set the model to use for all responses
+model = "gpt-4o-mini"
 
 class ConversationManager:
     def __init__(self):
@@ -30,7 +36,7 @@ class ConversationManager:
         try:
             try:
                 response = client.responses.create(
-                    model="gpt-4.1-mini",
+                    model=model,
                     input=self.messages,
                     tools=tools,
                 )
@@ -55,11 +61,12 @@ class ConversationManager:
                         "Note: The Google Calendar tools are temporarily unavailable due to a server issue. Calendar-related actions will not work until the server is restored."
                     )
                     response = client.responses.create(
-                        model="gpt-4.1-mini",
+                        model=model,
                         input=self.messages,
                         tools=tools,
                     )
                 else:
+                    logger.error(f"Error generating response: {e}")
                     raise
             outputs = response.output
             # Extract the assistant's text from the output structure (using attribute access)

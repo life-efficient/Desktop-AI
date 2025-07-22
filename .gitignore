@@ -29,3 +29,6 @@ desktop-ai-venv/
 
 # macOS Finder metadata
 .DS_Store 
+
+# Log files
+logs/ 
