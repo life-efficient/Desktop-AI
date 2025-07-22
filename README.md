@@ -108,14 +108,21 @@ Here are some handy `nmcli` commands for managing WiFi networks on your Raspberr
   nmcli connection delete "<ConnectionName>"
   ```
 
-- **Change the priority of a WiFi network:**
-  ```sh
-  sudo nmcli connection modify "<ConnectionName>" connection.autoconnect-priority <number>
-  ```
-
 - **Rescan for WiFi networks:**
   ```sh
   nmcli device wifi rescan
   ```
+
+- **Add a new WiFi network:**
+  ```sh
+  nmcli device wifi connect <SSID> password <password>
+  ```
+  Replace `<SSID>` with your WiFi network name and `<password>` with the WiFi password.
+
+- **Change the priority of a WiFi network:**
+  ```sh
+  sudo nmcli connection modify "<ConnectionName>" connection.autoconnect-priority <number>
+  ```
+  A **higher number means higher priority**. Networks with a higher priority value will be preferred when connecting automatically.
 
 Replace `<ConnectionName>` with the name of your WiFi connection as shown in the output of `nmcli connection show`. 

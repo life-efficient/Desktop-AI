@@ -10,7 +10,20 @@ from pathlib import Path
 import subprocess
 import threading
 import math
+import logging
 from conversation_manager import ConversationManager
+
+# Set up logging
+LOGFILE = "/home/pi/desktop-ai-logs/main.log"
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s: %(message)s',
+    handlers=[
+        logging.FileHandler(LOGFILE),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -131,12 +144,12 @@ class LEDPatternController:
 
 def enable_speaker():
     """Enable the speaker amplifier."""
-    print("Enabling speaker.")
+    logger.info("Enabling speaker.")
     GPIO.output(SPEAKER_SHUTDOWN_PIN, GPIO.HIGH)
 
 def disable_speaker():
     """Disable the speaker amplifier."""
-    print("Disabling speaker.")
+    logger.info("Disabling speaker.")
     GPIO.output(SPEAKER_SHUTDOWN_PIN, GPIO.LOW)
 
 RECORDING_FILE = Path("/tmp/recording.wav")
@@ -156,7 +169,7 @@ def transcribe_audio(audio_file):
             )
             return transcription.text
     except Exception as e:
-        print(f"Error during transcription: {e}")
+        logger.error(f"Error during transcription: {e}")
         return None
 
 def generate_speech(text):
@@ -173,7 +186,7 @@ def generate_speech(text):
             response.stream_to_file(RESPONSE_AUDIO_FILE)
         return True
     except Exception as e:
-        print(f"Error generating speech: {e}")
+        logger.error(f"Error generating speech: {e}")
         return False
 
 def play_audio(filename):
@@ -192,7 +205,7 @@ def play_audio(filename):
             stderr=subprocess.DEVNULL
         )
     except Exception as e:
-        print(f"Error starting audio playback: {e}")
+        logger.error(f"Error starting audio playback: {e}")
         disable_speaker()  # Turn speaker off on error
         playback_process = None
 
@@ -200,7 +213,7 @@ def stop_audio_playback():
     """Stops the currently playing audio."""
     global playback_process
     if playback_process and playback_process.poll() is None:
-        print("Interrupting audio playback.")
+        logger.info("Interrupting audio playback.")
         playback_process.terminate()
         try:
             # Wait for a moment to allow graceful termination
@@ -213,13 +226,14 @@ def stop_audio_playback():
         return True
     return False
 
-def cleanup():
-    print(f"Error: {e}")
+def cleanup(e=None):
+    if e is not None:
+        logger.error(f"Error: {e}")
     play_audio(Path(__file__).parent / "sounds" / "Error.wav")
     led.cleanup()  # Clean up LED resources
     stop_audio_playback() # Ensure audio is stopped
     GPIO.cleanup()
-    print("Exiting")
+    logger.info("Exiting")
 
 # Initialize conversation manager and LED controller
 conversation = ConversationManager()
@@ -228,18 +242,16 @@ led = LEDPatternController(LED_PIN)
 # Set desired pattern
 LED_PATTERN = "pulse"  # Can be "solid", "blink", or "pulse"
 
-print("Waiting for button press...")
-print(f"Current conversation has {len(conversation.messages)} messages")
-print(f"LED Pattern: {LED_PATTERN}")
-print("Available patterns:", ", ".join(f"{k} ({v})" for k, v in led.available_patterns.items()))
+logger.info("Waiting for button press...")
+logger.info(f"Current conversation has {len(conversation.messages)} messages")
+logger.info(f"LED Pattern: {LED_PATTERN}")
+logger.info("Available patterns: " + ", ".join(f"{k} ({v})" for k, v in led.available_patterns.items()))
 
 recording = []
 stream = None
 playback_process = None
 
 play_audio(Path(__file__).parent / "sounds" / "Bloop.wav")
-
-LOGFILE = "/home/pi/desktop-ai-logs/main.log"
 
 try:
     while True:
@@ -252,7 +264,7 @@ try:
 
             # If not already recording, start a new recording
             if stream is None:
-                print("Button pressed – recording...")
+                logger.info("Button pressed – recording...")
                 led.start(LED_PATTERN)
                 recording = []
                 stream = sd.InputStream(samplerate=SAMPLERATE, channels=CHANNELS, dtype='int16')
@@ -265,47 +277,47 @@ try:
         
         else: # Button is up
             if stream is not None:
-                print("Button released – saving file...")
+                logger.info("Button released – saving file...")
                 led.stop()
                 stream.stop()
                 stream.close()
                 stream = None
 
                 if not recording:
-                    print("No audio recorded.")
+                    logger.warning("No audio recorded.")
                     continue
 
                 audio = np.concatenate(recording, axis=0)
                 write(RECORDING_FILE, SAMPLERATE, audio)
-                print(f"Saved to {RECORDING_FILE}")
+                logger.info(f"Saved to {RECORDING_FILE}")
                 
                 # Play Drip sound after button release
                 play_audio(Path(__file__).parent / "sounds" / "Drip.wav")
                 
                 # Transcribe the recorded audio
-                print("Transcribing audio...")
+                logger.info("Transcribing audio...")
                 transcription = transcribe_audio(RECORDING_FILE)
                 if transcription:
-                    print(f"Transcription: {transcription}")
+                    logger.info(f"Transcription: {transcription}")
                     
                     # Add transcription to conversation and get response
                     conversation.add_message("user", transcription)
-                    print("\nGenerating response...")
+                    logger.info("Generating response...")
                     response = conversation.generate_response()
                     if response:
-                        print(f"Assistant: {response}")
+                        logger.info(f"Assistant: {response}")
                         
                         # Generate and play speech response
-                        print("Generating speech...")
+                        logger.info("Generating speech...")
                         if generate_speech(response):
-                            print("Playing response...")
+                            logger.info("Playing response...")
                             play_audio(RESPONSE_AUDIO_FILE)
                         else:
-                            print("Failed to generate speech")
+                            logger.error("Failed to generate speech")
                     else:
-                        print("Failed to generate response")
+                        logger.error("Failed to generate response")
                 else:
-                    print("Transcription failed")
+                    logger.error("Transcription failed")
 
         # Check if playback has finished on its own
         if playback_process and playback_process.poll() is not None:
