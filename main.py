@@ -10,20 +10,10 @@ from pathlib import Path
 import subprocess
 import threading
 import math
-import logging
+from logging_util import get_logger
 from conversation_manager import ConversationManager
 
-# Set up logging
-LOGFILE = "/home/pi/desktop-ai-logs/main.log"
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s: %(message)s',
-    handlers=[
-        logging.FileHandler(LOGFILE),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
