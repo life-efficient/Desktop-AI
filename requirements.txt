@@ -2,6 +2,6 @@ RPi.GPIO
 numpy
 scipy
 sounddevice
-openai
+openai>=1.50.0
 python-dotenv 
-requests
+websocket-client
