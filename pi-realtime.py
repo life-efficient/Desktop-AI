@@ -17,6 +17,7 @@ import threading
 import time
 import sys
 from hardware import Hardware
+from audio_input import StreamingAudioInput
 
 # LEDPatternController copied from main.py
 class LEDPatternController:
@@ -122,21 +123,6 @@ def normalize_audio(audio_array: np.ndarray) -> np.ndarray:
         return audio_array
     return (audio_array * (32767.0 / max_val)).astype(np.int16)
 
-def record_and_stream(client):
-    def callback(indata, frames, t, status):
-        chunk = indata.astype(np.int16).tobytes()
-        if hasattr(client, 'is_connected') and client.is_connected:
-            logger.info(f"Sending audio chunk of {len(chunk)} bytes to buffer.")
-            client.append_audio_buffer(chunk)
-        else:
-            logger.warning("Tried to send audio chunk but client is not connected.")
-    stream = sd.InputStream(
-        samplerate=48000, channels=1, dtype='int16', callback=callback, blocksize=1024
-    )
-    stream.start()
-    logger.info("Audio stream started.")
-    return stream
-
 def play_pcm16_audio(audio_data: bytes, hardware=None):
     """
     Play PCM16 audio data through the Pi speaker using aplay, and disable the speaker after playback.
@@ -203,7 +189,7 @@ def main():
             print("  - Hold button to talk (streaming)")
             print("  - Release button to send (must hold >0.5s)")
             print("  - Ctrl+C to exit")
-            stream = None
+            audio_input = None
             button_was_down = False
             t0 = None
             try:
@@ -212,16 +198,15 @@ def main():
                     if button_is_down and not button_was_down:
                         logger.info("Button pressed. Starting audio stream and clearing buffer.")
                         client.clear_audio_buffer()
-                        stream = record_and_stream(client)
+                        audio_input = StreamingAudioInput(client, samplerate=48000)
+                        audio_input.start()
                         hardware.led_on()
                         t0 = time.time()
                     elif not button_is_down and button_was_down:
                         logger.info("Button released. Stopping audio stream.")
-                        if stream:
-                            logger.info("Stopping and closing audio stream.")
-                            stream.stop()
-                            stream.close()
-                            stream = None
+                        if audio_input:
+                            audio_input.stop()
+                            audio_input = None
                         hardware.led_off()
                         held_time = time.time() - t0 if t0 else 0
                         if held_time > 0.5:
@@ -238,10 +223,8 @@ def main():
                 print("\nInterrupted by user. Ending conversation...")
             finally:
                 logger.info("Main loop exiting. Cleaning up audio stream and websocket.")
-                if stream:
-                    logger.info("Stopping and closing audio stream in finally block.")
-                    stream.stop()
-                    stream.close()
+                if audio_input:
+                    audio_input.stop()
                 print("\nClosing WebSocket connection...")
                 client.cleanup()
                 hardware.cleanup()
