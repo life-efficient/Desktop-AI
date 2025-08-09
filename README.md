@@ -126,3 +126,13 @@ Here are some handy `nmcli` commands for managing WiFi networks on your Raspberr
   A **higher number means higher priority**. Networks with a higher priority value will be preferred when connecting automatically.
 
 Replace `<ConnectionName>` with the name of your WiFi connection as shown in the output of `nmcli connection show`. 
+
+
+# Stopping the service for testing
+```
+# Stop the service (graceful shutdown)
+sudo systemctl stop desktop-ai.service
+
+# Check if it's stopped
+sudo systemctl status desktop-ai.service
+```
