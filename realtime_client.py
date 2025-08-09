@@ -86,7 +86,7 @@ class RealtimeClient:
         Handle specific types of events with minimal logging: only log the event type.
         """
         event_type = data.get("type")
-        logger.info(f"Event received: {event_type}")
+        # logger.info(f"Event received: {event_type}")
         
         if event_type == "response.done":
             response = data.get("response", {})
@@ -147,10 +147,14 @@ class RealtimeClient:
             error = data.get("error", {})
             error_message = error.get("message", "Unknown error")
             logger.error(f"Error event received: {error_message}")
+
+        elif event_type == "conversation.item.input_audio_transcription.completed":
+            logger.info("Transcribed:", data["transcript"])
         
         else:
             # Dump the entire event for unknown types
-            logger.info(f"[{event_type}]")
+            # logger.info(f"[{event_type}]")
+            pass
 
     def connect_websocket(self, model: str = "gpt-4o-realtime-preview-2024-12-17", on_message: Optional[Callable] = None, on_open: Optional[Callable] = None):
         """
