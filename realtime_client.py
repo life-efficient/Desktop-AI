@@ -10,6 +10,7 @@ import websocket
 from typing import Optional, Callable, Literal
 from dotenv import load_dotenv
 from logging_util import get_logger
+import threading
 
 # Load environment variables
 load_dotenv()
@@ -61,6 +62,10 @@ class RealtimeClient:
         self.ws = None
         self.audio_playback_func = audio_playback_func
         self.audio_buffer = bytearray()
+        self._ws_thread = None
+        self._ws_thread_running = False
+        self.connect_websocket()
+        self.start()
 
         # Validate audio playback function is provided when output_modality is audio
         if output_modality == "audio" and not audio_playback_func:
@@ -412,6 +417,26 @@ class RealtimeClient:
             logger.error(f"Failed to clear audio buffer: {e}")
             return False
 
+    def start(self):
+        """Start the websocket receive loop in a background thread if not already running."""
+        if self._ws_thread is not None and self._ws_thread.is_alive():
+            return
+        def run_ws():
+            self._ws_thread_running = True
+            try:
+                self.run_websocket()
+            finally:
+                self._ws_thread_running = False
+        self._ws_thread = threading.Thread(target=run_ws, daemon=True)
+        self._ws_thread.start()
+
+    def cleanup(self):
+        """Close the websocket and join the receive thread."""
+        self.close_websocket()
+        if self._ws_thread is not None:
+            self._ws_thread.join(timeout=2.0)
+            self._ws_thread = None
+
 
 def main():
     """
@@ -439,18 +464,12 @@ def main():
         print("-" * 50)
         
         # Start WebSocket in a separate thread
-        import threading
-        import time
-        
-        def run_websocket():
-            client.run_websocket()
-        
-        # Start WebSocket thread
-        ws_thread = threading.Thread(target=run_websocket, daemon=True)
-        ws_thread.start()
+        client.start()
         
         # Give WebSocket time to connect
-        time.sleep(1)
+        # The run_websocket method is now in a background thread, so we don't need to sleep here
+        # unless we want to wait for the thread to start processing messages.
+        # For now, we'll proceed with user input.
         
         # Text input loop
         while True:
@@ -485,7 +504,7 @@ def main():
         
         # Clean up
         print("\nClosing WebSocket connection...")
-        client.close_websocket()
+        client.cleanup()
         
     else:
         print("✗ Failed to establish WebSocket connection")

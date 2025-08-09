@@ -199,6 +199,7 @@ def main():
     print("\n1. Testing WebSocket connection...")
     if client.connect_websocket():
         print("✓ WebSocket connection established")
+        client.start()  # Start websocket receive loop in background
         if input_modality == 'audio':
             print("\nPush-to-Talk mode (button):")
             print("  - Hold button to talk (streaming)")
@@ -244,18 +245,13 @@ def main():
                     stream.stop()
                     stream.close()
                 print("\nClosing WebSocket connection...")
-                client.close_websocket()
+                client.cleanup()
                 hardware.cleanup()
         else:
             print("\nText input mode:")
             print("  - Type your message and press Enter to send")
             print("  - Type 'quit' or 'exit' to stop")
             print("  - Ctrl+C to exit")
-            import threading
-            def run_websocket():
-                client.run_websocket()
-            ws_thread = threading.Thread(target=run_websocket, daemon=True)
-            ws_thread.start()
             time.sleep(1)
             try:
                 while True:
@@ -273,7 +269,7 @@ def main():
                 print("\nInterrupted by user. Ending conversation...")
             finally:
                 print("\nClosing WebSocket connection...")
-                client.close_websocket()
+                client.cleanup()
                 hardware.cleanup()
     else:
         print("✗ Failed to establish WebSocket connection")
