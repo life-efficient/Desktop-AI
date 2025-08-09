@@ -17,6 +17,76 @@ import threading
 import time
 import sys
 
+# LEDPatternController copied from main.py
+class LEDPatternController:
+    """Controls LED patterns using PWM"""
+    PATTERNS = {
+        "solid": "Steady brightness",
+        "blink": "On/off blinking",
+        "pulse": "Smooth breathing effect"
+    }
+    def __init__(self, pin, pwm_freq=100):
+        self.pin = pin
+        self.pwm_freq = pwm_freq
+        self.pwm = None
+        self.pattern = "solid"
+        self.running = False
+        self.thread = None
+    def _setup_pwm(self):
+        if self.pwm is None:
+            self.pwm = GPIO.PWM(self.pin, self.pwm_freq)
+            self.pwm.start(0)
+    def _pattern_loop(self):
+        self._setup_pwm()
+        try:
+            while self.running:
+                if self.pattern == "solid":
+                    self.pwm.ChangeDutyCycle(100)
+                    time.sleep(0.1)
+                elif self.pattern == "blink":
+                    self.pwm.ChangeDutyCycle(100)
+                    time.sleep(0.5)
+                    if not self.running:
+                        break
+                    self.pwm.ChangeDutyCycle(0)
+                    time.sleep(0.5)
+                elif self.pattern == "pulse":
+                    for dc in range(0, 101, 2):
+                        if not self.running:
+                            break
+                        self.pwm.ChangeDutyCycle(dc)
+                        time.sleep(0.01)
+                    for dc in range(100, -1, -2):
+                        if not self.running:
+                            break
+                        self.pwm.ChangeDutyCycle(dc)
+                        time.sleep(0.01)
+        finally:
+            self.pwm.ChangeDutyCycle(0)
+    def start(self, pattern=None):
+        if pattern is not None:
+            if pattern not in self.PATTERNS:
+                raise ValueError(f"Invalid pattern. Choose from: {', '.join(self.PATTERNS.keys())}")
+            self.pattern = pattern
+        if self.thread is None or not self.thread.is_alive():
+            self.running = True
+            self.thread = threading.Thread(target=self._pattern_loop)
+            self.thread.daemon = True
+            self.thread.start()
+    def stop(self):
+        self.running = False
+        if self.thread is not None:
+            self.thread.join(timeout=1.0)
+        GPIO.output(self.pin, GPIO.LOW)
+    def cleanup(self):
+        self.stop()
+        if self.pwm is not None:
+            self.pwm.stop()
+            self.pwm = None
+    @property
+    def available_patterns(self):
+        return self.PATTERNS
+
 logger = get_logger(__name__)
 
 # GPIO pin setup (reuse from main.py)
@@ -26,6 +96,7 @@ SPEAKER_SHUTDOWN_PIN = 22
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(SPEAKER_SHUTDOWN_PIN, GPIO.OUT)
 GPIO.output(SPEAKER_SHUTDOWN_PIN, GPIO.LOW)  # Start with speaker disabled
+GPIO.setup(LED_PIN, GPIO.OUT)
 
 # Speaker control
 
@@ -111,6 +182,9 @@ def main():
         GPIO.cleanup()
         return
     
+    led = LEDPatternController(LED_PIN)
+    LED_PATTERN = "pulse"
+
     # Test WebSocket connection
     print("\n1. Testing WebSocket connection...")
     if client.connect_websocket():
@@ -133,7 +207,7 @@ def main():
                         # Button just pressed
                         client.clear_audio_buffer()
                         stream = record_and_stream(client)
-                        # (Assume led.start(LED_PATTERN) is called)
+                        led.start(LED_PATTERN)
                         t0 = time.time()
                     elif not button_is_down and button_was_down:
                         # Button just released
@@ -141,7 +215,7 @@ def main():
                             stream.stop()
                             stream.close()
                             stream = None
-                        # (Assume led.stop() is called)
+                        led.stop()
                         held_time = time.time() - t0 if t0 else 0
                         if held_time > 0.5:
                             client.commit_audio_buffer()
@@ -156,6 +230,7 @@ def main():
             finally:
                 print("\nClosing WebSocket connection...")
                 client.close_websocket()
+                led.cleanup()
                 GPIO.cleanup()
         else:
             print("\nText input mode:")
