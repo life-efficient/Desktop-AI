@@ -74,13 +74,10 @@ class RealtimeClient:
     
     def handle_event(self, data: dict):
         """
-        Handle specific types of events with if/else blocks.
-        
-        Args:
-            data: The event data received from the WebSocket
+        Handle specific types of events with minimal logging: only log the event type.
         """
-        print(f"Handling event: {data}")
         event_type = data.get("type")
+        logger.info(f"Event received: {event_type}")
         
         if event_type == "response.done":
             response = data.get("response", {})
