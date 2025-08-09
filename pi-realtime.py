@@ -198,8 +198,7 @@ def main():
                     if button_is_down and not button_was_down:
                         logger.info("Button pressed. Starting audio stream and clearing buffer.")
                         client.clear_audio_buffer()
-                        # audio_input = StreamingAudioInput(client, samplerate=48000)
-                        audio_input = BufferedAudioInput(client, samplerate=48000)
+                        audio_input = StreamingAudioInput(client, samplerate=48000)
                         audio_input.start()
                         hardware.led_on()
                         t0 = time.time()
@@ -211,9 +210,6 @@ def main():
                         hardware.led_off()
                         held_time = time.time() - t0 if t0 else 0
                         if held_time > 0.5:
-                            logger.info("Committing audio buffer and requesting response.")
-                            client.commit_audio_buffer()
-                            client.create_response()
                             print("✓ Sent audio input and requested response.")
                         else:
                             logger.info("Button press too short, ignoring.")
