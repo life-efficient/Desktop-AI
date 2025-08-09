@@ -449,6 +449,30 @@ class RealtimeClient:
             self._ws_thread.join(timeout=2.0)
             self._ws_thread = None
 
+    def send_full_audio(self, audio_data: bytes):
+        """
+        Send a full audio message as a single user message (for buffered audio input).
+        """
+        import base64, json
+        if not self.is_connected:
+            return False
+        encoded_audio = base64.b64encode(audio_data).decode('utf-8')
+        event = {
+            "type": "conversation.item.create",
+            "item": {
+                "type": "message",
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_audio",
+                        "audio": encoded_audio,
+                    }
+                ],
+            },
+        }
+        self.ws.send(json.dumps(event))
+        return True
+
 
 def main():
     """
