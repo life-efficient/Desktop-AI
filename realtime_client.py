@@ -62,10 +62,6 @@ class RealtimeClient:
         self.audio_playback_func = audio_playback_func
         self.audio_buffer = bytearray()
 
-        print('input_modality', input_modality)
-        print('output_modality', output_modality)
-        input()
-        
         # Validate audio playback function is provided when output_modality is audio
         if output_modality == "audio" and not audio_playback_func:
             logger.warning("output_modality is 'audio' but no audio_playback_func provided")
