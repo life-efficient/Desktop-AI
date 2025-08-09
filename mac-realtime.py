@@ -248,7 +248,6 @@ def main():
         audio_player.stop()
         return
     
-    # No need to call connect_websocket() or start(); client is ready
     print("\n1. Testing WebSocket connection...")
     if client.is_connected:
         print("✓ WebSocket connection established")
@@ -258,12 +257,6 @@ def main():
             print("  - Release SPACEBAR to send (must hold >0.5s)")
             print("  - Press Ctrl+C to exit")
             print("-" * 50)
-            import threading
-            def run_websocket():
-                client.run_websocket()
-            ws_thread = threading.Thread(target=run_websocket, daemon=True)
-            ws_thread.start()
-            time.sleep(1)
             try:
                 ptt = PushToTalk(client)
                 ptt.run()
@@ -281,12 +274,6 @@ def main():
             print("  - Type 'quit' or 'exit' to stop")
             print("  - Press Ctrl+C to exit")
             print("-" * 50)
-            import threading
-            def run_websocket():
-                client.run_websocket()
-            ws_thread = threading.Thread(target=run_websocket, daemon=True)
-            ws_thread.start()
-            time.sleep(1)
             try:
                 while True:
                     user_input = input("\nYou: ").strip()
