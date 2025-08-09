@@ -168,7 +168,7 @@ def main():
     # Initialize RealtimeClient with audio playback
     try:
         client = RealtimeClient(
-            audio_playback_func=lambda audio, sr=24000: play_pcm16_audio(audio, sr, hardware),
+            audio_playback_func=lambda audio : play_pcm16_audio(audio, hardware),
             input_modality=input_modality,
             output_modality=output_modality
         )
