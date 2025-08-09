@@ -12,10 +12,8 @@ class StreamingAudioInput:
         ...
         s.stop()  # Commits and requests response
     """
-    def __init__(self, client, samplerate=48000, blocksize=1024):
+    def __init__(self, client):
         self.client = client
-        self.samplerate = samplerate
-        self.blocksize = blocksize
         self.stream = None
         self.running = False
 
@@ -34,11 +32,11 @@ class StreamingAudioInput:
             print("[StreamingAudioInput.start] Stream already started")
             return
         self.stream = sd.InputStream(
-            samplerate=self.samplerate,
+            samplerate=48000,
             channels=1,
             dtype='int16',
             callback=self._callback,
-            blocksize=self.blocksize
+            blocksize=1024
         )
         self.stream.start()
         self.running = True
@@ -72,10 +70,8 @@ class BufferedAudioInput:
         ...
         b.stop()  # Sends the full audio buffer
     """
-    def __init__(self, client, samplerate=48000, blocksize=1024):
+    def __init__(self, client):
         self.client = client
-        self.samplerate = samplerate
-        self.blocksize = blocksize
         self.stream = None
         self.frames = []
 
@@ -90,10 +86,10 @@ class BufferedAudioInput:
             return
         self.frames = []
         self.stream = sd.InputStream(
-            samplerate=self.samplerate,
+            samplerate=48000,
             channels=1,
             dtype='int16',
-            blocksize=self.blocksize,
+            blocksize=1024,
             callback=self._callback
         )
         self.stream.start()
