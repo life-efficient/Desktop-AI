@@ -136,8 +136,7 @@ def play_pcm16_audio(audio_data: bytes, sample_rate=24000, hardware=None):
                     wf.setsampwidth(2)
                     wf.setframerate(sample_rate)
                     wf.writeframes(audio_data)
-            if hardware:
-                hardware.enable_speaker()
+            hardware.enable_speaker()
             proc = subprocess.Popen(
                 ["aplay", "-D", "plughw:0,0", wav_path],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -146,8 +145,7 @@ def play_pcm16_audio(audio_data: bytes, sample_rate=24000, hardware=None):
         except Exception as e:
             print(f"Error playing audio: {e}")
         finally:
-            if hardware:
-                hardware.disable_speaker()
+            hardware.disable_speaker()
     import threading
     threading.Thread(target=playback_thread, daemon=True).start()
 
