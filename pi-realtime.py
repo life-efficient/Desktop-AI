@@ -198,7 +198,7 @@ def main():
                     if button_is_down and not button_was_down:
                         logger.info("Button pressed. Starting audio stream and clearing buffer.")
                         client.clear_audio_buffer()
-                        audio_input = StreamingAudioInput(client, samplerate=48000)
+                        audio_input = BufferedAudioInput(client, samplerate=48000)
                         audio_input.start()
                         hardware.led_on()
                         t0 = time.time()
