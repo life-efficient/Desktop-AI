@@ -7,7 +7,7 @@ This module provides a client for OpenAI's Realtime API using websockets.
 import os
 import json
 import websocket
-from typing import Optional, Callable
+from typing import Optional, Callable, Literal
 from dotenv import load_dotenv
 from logging_util import get_logger
 
@@ -16,25 +16,49 @@ load_dotenv()
 
 logger = get_logger(__name__)
 
+# Type aliases for modalities
+ModalityType = Literal["text", "audio"]
+
 class RealtimeClient:
     """
     Client for OpenAI's Realtime API using websockets.
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, 
+                 api_key: Optional[str] = None, 
+                 audio_playback_func: Optional[Callable] = None,
+                 input_modality: ModalityType = "text",
+                 output_modality: ModalityType = "text"):
         """
         Initialize the RealtimeClient.
         
         Args:
             api_key: OpenAI API key (defaults to OPENAI_API_KEY from .env)
+            audio_playback_func: Optional function for playing audio (should accept bytes)
+            input_modality: Input modality - "text" or "audio" (default: "text")
+            output_modality: Output modality - "text" or "audio" (default: "text")
         """
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY not found in environment or .env file")
         
-        self.ws = None
+        # Validate modalities
+        if input_modality not in ["text", "audio"]:
+            raise ValueError("input_modality must be 'text' or 'audio'")
+        if output_modality not in ["text", "audio"]:
+            raise ValueError("output_modality must be 'text' or 'audio'")
         
-        logger.info("RealtimeClient initialized")
+        self.input_modality = input_modality
+        self.output_modality = output_modality
+        self.ws = None
+        self.audio_playback_func = audio_playback_func
+        self.audio_buffer = bytearray()
+        
+        # Validate audio playback function is provided when output_modality is audio
+        if output_modality == "audio" and not audio_playback_func:
+            logger.warning("output_modality is 'audio' but no audio_playback_func provided")
+        
+        logger.info(f"RealtimeClient initialized with input_modality={input_modality}, output_modality={output_modality}")
     
     def handle_event(self, data: dict):
         """
@@ -49,17 +73,42 @@ class RealtimeClient:
             response = data.get("response", {})
             output = response.get("output", [])
             
-            # Extract AI response text from the output
-            for item in output:
-                if item.get("type") == "message" and item.get("role") == "assistant":
-                    content = item.get("content", [])
-                    for content_item in content:
-                        if content_item.get("type") == "text":
-                            ai_response = content_item.get("text", "")
-                            if ai_response:
-                                print(f"\nAI: {ai_response}\n")
-                                logger.info(f"AI Response: {ai_response}")
-                            break
+            # Extract AI response text from the output (if output_modality is text)
+            if self.output_modality == "text":
+                for item in output:
+                    if item.get("type") == "message" and item.get("role") == "assistant":
+                        content = item.get("content", [])
+                        for content_item in content:
+                            if content_item.get("type") == "text":
+                                ai_response = content_item.get("text", "")
+                                if ai_response:
+                                    print(f"\nAI: {ai_response}\n")
+                                    logger.info(f"AI Response: {ai_response}")
+                                break
+            
+            # Play accumulated audio if available and output_modality is audio
+            if self.output_modality == "audio" and self.audio_buffer and self.audio_playback_func:
+                try:
+                    self.audio_playback_func(bytes(self.audio_buffer))
+                    logger.info(f"Played {len(self.audio_buffer)} bytes of audio")
+                except Exception as e:
+                    logger.error(f"Failed to play audio: {e}")
+                finally:
+                    self.audio_buffer.clear()
+        
+        elif event_type == "response.audio.delta":
+            # Handle audio delta events - accumulate audio data (only if output_modality is audio)
+            if self.output_modality == "audio":
+                audio_data = data.get("delta", {}).get("audio", "")
+                if audio_data:
+                    try:
+                        # Decode base64 audio data and add to buffer
+                        import base64
+                        decoded_audio = base64.b64decode(audio_data)
+                        self.audio_buffer.extend(decoded_audio)
+                        logger.debug(f"Added {len(decoded_audio)} bytes to audio buffer")
+                    except Exception as e:
+                        logger.error(f"Failed to decode audio data: {e}")
         
         elif event_type == "conversation.item.create":
             item = data.get("item", {})
@@ -151,6 +200,10 @@ class RealtimeClient:
             logger.error("No WebSocket connection. Call connect_websocket() first.")
             return False
         
+        if self.input_modality != "text":
+            logger.error(f"Cannot send text message when input_modality is '{self.input_modality}'")
+            return False
+        
         try:
             event = {
                 "type": "conversation.item.create",
@@ -170,7 +223,7 @@ class RealtimeClient:
             self.ws.send(message)
             logger.info(f"Sent text message: {text}")
             
-            # Trigger response creation
+            # Trigger response creation with appropriate modalities
             self.create_response()
             
             return True
@@ -179,12 +232,62 @@ class RealtimeClient:
             logger.error(f"Failed to send text message: {e}")
             return False
     
-    def create_response(self, modalities: list = ["text"]) -> bool:
+    def send_audio_message(self, audio_data: bytes) -> bool:
+        """
+        Send an audio message through the WebSocket connection.
+        
+        Args:
+            audio_data: Raw audio data to send
+            
+        Returns:
+            bool: True if message sent successfully, False otherwise
+        """
+        if not self.ws:
+            logger.error("No WebSocket connection. Call connect_websocket() first.")
+            return False
+        
+        if self.input_modality != "audio":
+            logger.error(f"Cannot send audio message when input_modality is '{self.input_modality}'")
+            return False
+        
+        try:
+            # Encode audio data as base64
+            import base64
+            encoded_audio = base64.b64encode(audio_data).decode('utf-8')
+            
+            event = {
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_audio",
+                            "audio": encoded_audio,
+                        }
+                    ]
+                }
+            }
+            
+            message = json.dumps(event)
+            self.ws.send(message)
+            logger.info(f"Sent audio message: {len(audio_data)} bytes")
+            
+            # Trigger response creation with appropriate modalities
+            self.create_response()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to send audio message: {e}")
+            return False
+    
+    def create_response(self, modalities: Optional[list] = None) -> bool:
         """
         Trigger a response creation from the model.
         
         Args:
-            modalities: List of modalities for the response (default: ["text"])
+            modalities: List of modalities for the response (defaults to output_modality)
             
         Returns:
             bool: True if response creation triggered successfully, False otherwise
@@ -192,6 +295,10 @@ class RealtimeClient:
         if not self.ws:
             logger.error("No WebSocket connection. Call connect_websocket() first.")
             return False
+        
+        # Use output_modality if no modalities specified
+        if modalities is None:
+            modalities = [self.output_modality]
         
         try:
             event = {
@@ -238,10 +345,10 @@ def main():
     print("Testing RealtimeClient WebSocket")
     print("=" * 30)
     
-    # Initialize client
+    # Initialize client with text input and text output
     try:
-        client = RealtimeClient()
-        print("✓ RealtimeClient initialized successfully")
+        client = RealtimeClient(input_modality="text", output_modality="text")
+        print("✓ RealtimeClient initialized successfully with text input/output")
     except Exception as e:
         print(f"✗ Failed to initialize RealtimeClient: {e}")
         return
@@ -250,7 +357,7 @@ def main():
     print("\n1. Testing WebSocket connection...")
     if client.connect_websocket():
         print("✓ WebSocket connection established")
-        print("\nInteractive text messaging mode:")
+        print(f"\nInteractive messaging mode (input: {client.input_modality}, output: {client.output_modality}):")
         print("  - Type your messages and press Enter to send")
         print("  - Type 'quit' or 'exit' to stop")
         print("  - Press Ctrl+C to stop the WebSocket connection")
