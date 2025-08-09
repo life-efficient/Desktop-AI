@@ -150,7 +150,7 @@ class RealtimeClient:
         
         else:
             # Dump the entire event for unknown types
-            logger.info(f"Unknown event type '{event_type}': {json.dumps(data, indent=2)}")
+            logger.info(f"[{event_type}]")
 
     def connect_websocket(self, model: str = "gpt-4o-realtime-preview-2024-12-17", on_message: Optional[Callable] = None, on_open: Optional[Callable] = None):
         """

@@ -193,7 +193,6 @@ def main():
         return
     
     led = LEDPatternController(LED_PIN)
-    LED_PATTERN = "pulse"
 
     # No need to call connect_websocket() or start(); client is ready
     print("\n1. Testing WebSocket connection...")
