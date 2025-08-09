@@ -46,7 +46,7 @@ def apply_volume(audio_array: np.ndarray, volume: float) -> np.ndarray:
         return audio_array
     return np.clip(audio_array * volume, -32768, 32767).astype(np.int16)
 
-def play_pcm16_audio(audio_data: bytes, sample_rate=24000, volume=2.0):
+def play_pcm16_audio(audio_data: bytes, sample_rate=24000, volume=10.0):
     """
     Play PCM16 audio data through the Pi speaker using sounddevice, with volume boost.
     """
