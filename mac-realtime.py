@@ -12,6 +12,10 @@ import threading
 import queue
 from realtime_client import RealtimeClient
 from logging_util import get_logger
+import sounddevice as sd
+import numpy as np
+import time
+from pynput import keyboard  # pip install pynput
 
 logger = get_logger(__name__)
 
@@ -167,94 +171,99 @@ def create_audio_playback_function():
     return play_audio, audio_player
 
 
+class PushToTalk:
+    def __init__(self, client):
+        self.client = client
+        self.recording = False
+        self.stream = None
+        self.t0 = None
+        self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
+        self.space_held = False
+
+    def on_press(self, key):
+        if key == keyboard.Key.space and not self.space_held:
+            self.space_held = True
+            print("Recording...")
+            self.recording = True
+            self.stream, self.t0 = self.record_and_stream()
+
+    def on_release(self, key):
+        if key == keyboard.Key.space and self.space_held:
+            self.space_held = False
+            if self.stream:
+                self.stream.stop()
+                self.stream.close()
+            held_time = time.time() - self.t0 if self.t0 else 0
+            self.recording = False
+            if held_time > 0.5:
+                self.client.commit_audio_buffer()
+                self.client.create_response()
+                print("✓ Sent audio input and requested response.")
+            else:
+                print("Press was too short, ignoring.")
+
+    def record_and_stream(self):
+        def callback(indata, frames, t, status):
+            chunk = indata.astype(np.int16).tobytes()
+            self.client.append_audio_buffer(chunk)
+        stream = sd.InputStream(
+            samplerate=24000, channels=1, dtype='int16', callback=callback, blocksize=1024
+        )
+        stream.start()
+        return stream, time.time()
+
+    def run(self):
+        self.listener.start()
+        self.listener.join()
+
 def main():
-    """
-    Main function for macOS Realtime Client with audio.
-    """
-    print("macOS Realtime Client with Audio")
+    print("macOS Realtime Client with Audio (Push-to-Talk)")
     print("=" * 30)
     
     # Create audio playback function
     audio_playback_func, audio_player = create_audio_playback_function()
     
     try:
-        # Initialize client with text input and audio output
         client = RealtimeClient(
             audio_playback_func=audio_playback_func,
-            input_modality="text",
+            input_modality="audio",
             output_modality="audio"
         )
-        print("✓ RealtimeClient initialized with text input and audio output")
+        print("✓ RealtimeClient initialized with audio input and audio output")
     except Exception as e:
         print(f"✗ Failed to initialize RealtimeClient: {e}")
         return
     
-    # Test WebSocket connection
     print("\n1. Testing WebSocket connection...")
     if client.connect_websocket():
         print("✓ WebSocket connection established")
-        print(f"\nInteractive messaging mode (input: {client.input_modality}, output: {client.output_modality}):")
-        print("  - Type your messages and press Enter to send")
-        print("  - Type 'quit' or 'exit' to stop")
-        print("  - Press Ctrl+C to stop the WebSocket connection")
-        print("  - Audio responses will be played automatically")
+        print("\nPush-to-Talk mode:")
+        print("  - Hold SPACEBAR to talk (streaming)")
+        print("  - Release SPACEBAR to send (must hold >0.5s)")
+        print("  - Press Ctrl+C to exit")
         print("-" * 50)
         
-        # Start WebSocket in a separate thread
         import threading
-        import time
-        
         def run_websocket():
             client.run_websocket()
-        
-        # Start WebSocket thread
         ws_thread = threading.Thread(target=run_websocket, daemon=True)
         ws_thread.start()
-        
-        # Give WebSocket time to connect
         time.sleep(1)
         
-        # Text input loop
-        while True:
-            try:
-                # Get user input
-                user_input = input("\nYou: ").strip()
-                
-                # Check for exit commands
-                if user_input.lower() in ['quit', 'exit', 'q']:
-                    print("Ending conversation...")
-                    break
-                
-                # Skip empty input
-                if not user_input:
-                    continue
-                
-                # Send the text message (will trigger audio responses)
-                if client.send_text_message(user_input):
-                    print("✓ Message sent")
-                else:
-                    print("✗ Failed to send message")
-                    
-            except KeyboardInterrupt:
-                print("\n\nInterrupted by user. Ending conversation...")
-                break
-            except EOFError:
-                print("\n\nEnd of input. Ending conversation...")
-                break
-            except Exception as e:
-                print(f"\nError: {e}")
-                continue
-        
-        # Clean up
-        print("\nClosing WebSocket connection...")
-        client.close_websocket()
-        audio_player.stop()
-        
+        try:
+            ptt = PushToTalk(client)
+            ptt.run()
+        except KeyboardInterrupt:
+            print("\nInterrupted by user. Ending conversation...")
+        except EOFError:
+            print("\nEnd of input. Ending conversation...")
+        finally:
+            print("\nClosing WebSocket connection...")
+            client.close_websocket()
+            audio_player.stop()
     else:
         print("✗ Failed to establish WebSocket connection")
-    
     print("\n✓ All tests completed!")
-
 
 if __name__ == "__main__":
     main() 

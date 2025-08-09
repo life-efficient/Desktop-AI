@@ -350,6 +350,49 @@ class RealtimeClient:
             self.ws = None
             logger.info("WebSocket connection closed.")
 
+    def append_audio_buffer(self, chunk: bytes, event_id: Optional[str] = None):
+        """
+        Append audio bytes to the input audio buffer (for streaming input to OpenAI).
+        """
+        if not self.ws:
+            logger.error("No WebSocket connection. Call connect_websocket() first.")
+            return False
+        try:
+            import base64
+            encoded_audio = base64.b64encode(chunk).decode('utf-8')
+            event = {
+                "type": "input_audio_buffer.append",
+                "audio": encoded_audio
+            }
+            if event_id:
+                event["event_id"] = event_id
+            self.ws.send(json.dumps(event))
+            logger.debug(f"Appended {len(chunk)} bytes to audio buffer.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to append audio buffer: {e}")
+            return False
+
+    def commit_audio_buffer(self, event_id: Optional[str] = None):
+        """
+        Commit the input audio buffer (finalize streaming input to OpenAI).
+        """
+        if not self.ws:
+            logger.error("No WebSocket connection. Call connect_websocket() first.")
+            return False
+        try:
+            event = {
+                "type": "input_audio_buffer.commit"
+            }
+            if event_id:
+                event["event_id"] = event_id
+            self.ws.send(json.dumps(event))
+            logger.info("Committed audio buffer.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to commit audio buffer: {e}")
+            return False
+
 
 def main():
     """
