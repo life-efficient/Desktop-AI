@@ -109,7 +109,7 @@ class BufferedAudioInput:
     def _send(self):
         print("[BufferedAudioInput._send] Sending full audio buffer to OpenAI")
         if self.frames:
-            audio = np.concatenate(self.frames, axis=0)
+            audio = np.concatenate(self.frames, axis=0).flatten()
             print(f"[BufferedAudioInput._send] Sending {audio.nbytes} bytes")
             self.client.send_full_audio(audio.tobytes())
             self.client.create_response()
