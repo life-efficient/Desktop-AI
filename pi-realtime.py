@@ -122,7 +122,22 @@ def normalize_audio(audio_array: np.ndarray) -> np.ndarray:
         return audio_array
     return (audio_array * (32767.0 / max_val)).astype(np.int16)
 
-def play_pcm16_audio(audio_data: bytes, sample_rate=24000, hardware=None):
+def record_and_stream(client):
+    def callback(indata, frames, t, status):
+        chunk = indata.astype(np.int16).tobytes()
+        if hasattr(client, 'is_connected') and client.is_connected:
+            logger.info(f"Sending audio chunk of {len(chunk)} bytes to buffer.")
+            client.append_audio_buffer(chunk)
+        else:
+            logger.warning("Tried to send audio chunk but client is not connected.")
+    stream = sd.InputStream(
+        samplerate=48000, channels=1, dtype='int16', callback=callback, blocksize=1024
+    )
+    stream.start()
+    logger.info("Audio stream started.")
+    return stream
+
+def play_pcm16_audio(audio_data: bytes, hardware=None):
     """
     Play PCM16 audio data through the Pi speaker using aplay, and disable the speaker after playback.
     """
@@ -134,7 +149,7 @@ def play_pcm16_audio(audio_data: bytes, sample_rate=24000, hardware=None):
                 with wave.open(f, 'wb') as wf:
                     wf.setnchannels(1)
                     wf.setsampwidth(2)
-                    wf.setframerate(sample_rate)
+                    wf.setframerate(24000)
                     wf.writeframes(audio_data)
             hardware.enable_speaker()
             proc = subprocess.Popen(
@@ -148,21 +163,6 @@ def play_pcm16_audio(audio_data: bytes, sample_rate=24000, hardware=None):
             hardware.disable_speaker()
     import threading
     threading.Thread(target=playback_thread, daemon=True).start()
-
-def record_and_stream(client):
-    def callback(indata, frames, t, status):
-        chunk = indata.astype(np.int16).tobytes()
-        if hasattr(client, 'is_connected') and client.is_connected:
-            logger.info(f"Sending audio chunk of {len(chunk)} bytes to buffer.")
-            client.append_audio_buffer(chunk)
-        else:
-            logger.warning("Tried to send audio chunk but client is not connected.")
-    stream = sd.InputStream(
-        samplerate=24000, channels=1, dtype='int16', callback=callback, blocksize=1024
-    )
-    stream.start()
-    logger.info("Audio stream started.")
-    return stream
 
 # Main CLI loop
 
