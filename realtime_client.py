@@ -347,12 +347,16 @@ class RealtimeClient:
             self.ws = None
             logger.info("WebSocket connection closed.")
 
+    @property
+    def is_connected(self):
+        """Return True if the websocket is open and connected."""
+        return self.ws and getattr(self.ws, 'sock', None) and self.ws.sock.connected
+
     def append_audio_buffer(self, chunk: bytes, event_id: Optional[str] = None):
         """
         Append audio bytes to the input audio buffer (for streaming input to OpenAI).
         """
-        if not self.ws:
-            logger.error("No WebSocket connection. Call connect_websocket() first.")
+        if not self.is_connected:
             return False
         try:
             import base64
@@ -374,8 +378,7 @@ class RealtimeClient:
         """
         Commit the input audio buffer (finalize streaming input to OpenAI).
         """
-        if not self.ws:
-            logger.error("No WebSocket connection. Call connect_websocket() first.")
+        if not self.is_connected:
             return False
         try:
             event = {
@@ -394,8 +397,7 @@ class RealtimeClient:
         """
         Clear the input audio buffer before starting a new user input (when VAD is disabled).
         """
-        if not self.ws:
-            logger.error("No WebSocket connection. Call connect_websocket() first.")
+        if not self.is_connected:
             return False
         try:
             event = {

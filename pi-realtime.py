@@ -152,11 +152,16 @@ def play_pcm16_audio(audio_data: bytes, sample_rate=24000, hardware=None):
 def record_and_stream(client):
     def callback(indata, frames, t, status):
         chunk = indata.astype(np.int16).tobytes()
-        client.append_audio_buffer(chunk)
+        if hasattr(client, 'is_connected') and client.is_connected:
+            logger.info(f"Sending audio chunk of {len(chunk)} bytes to buffer.")
+            client.append_audio_buffer(chunk)
+        else:
+            logger.warning("Tried to send audio chunk but client is not connected.")
     stream = sd.InputStream(
         samplerate=24000, channels=1, dtype='int16', callback=callback, blocksize=1024
     )
     stream.start()
+    logger.info("Audio stream started.")
     return stream
 
 # Main CLI loop
@@ -206,30 +211,38 @@ def main():
                 while True:
                     button_is_down = hardware.button_pressed()
                     if button_is_down and not button_was_down:
-                        # Button just pressed
+                        logger.info("Button pressed. Starting audio stream and clearing buffer.")
                         client.clear_audio_buffer()
                         stream = record_and_stream(client)
                         hardware.led_on()
                         t0 = time.time()
                     elif not button_is_down and button_was_down:
-                        # Button just released
+                        logger.info("Button released. Stopping audio stream.")
                         if stream:
+                            logger.info("Stopping and closing audio stream.")
                             stream.stop()
                             stream.close()
                             stream = None
                         hardware.led_off()
                         held_time = time.time() - t0 if t0 else 0
                         if held_time > 0.5:
+                            logger.info("Committing audio buffer and requesting response.")
                             client.commit_audio_buffer()
                             client.create_response()
                             print("✓ Sent audio input and requested response.")
                         else:
+                            logger.info("Button press too short, ignoring.")
                             print("Button press too short, ignoring.")
                     button_was_down = button_is_down
                     time.sleep(0.01)
             except KeyboardInterrupt:
                 print("\nInterrupted by user. Ending conversation...")
             finally:
+                logger.info("Main loop exiting. Cleaning up audio stream and websocket.")
+                if stream:
+                    logger.info("Stopping and closing audio stream in finally block.")
+                    stream.stop()
+                    stream.close()
                 print("\nClosing WebSocket connection...")
                 client.close_websocket()
                 hardware.cleanup()
