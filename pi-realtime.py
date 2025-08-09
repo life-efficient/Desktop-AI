@@ -11,6 +11,8 @@ import subprocess
 import RPi.GPIO as GPIO
 from realtime_client import RealtimeClient
 from logging_util import get_logger
+import sounddevice as sd
+import numpy as np
 
 logger = get_logger(__name__)
 
@@ -38,28 +40,16 @@ def disable_speaker():
 
 def play_pcm16_audio(audio_data: bytes, sample_rate=24000):
     """
-    Play PCM16 audio data through the Pi speaker using aplay, in a background thread.
+    Play PCM16 audio data through the Pi speaker using sounddevice.
     """
-    def playback_thread():
-        try:
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
-                wav_path = f.name
-                with wave.open(f, 'wb') as wf:
-                    wf.setnchannels(1)
-                    wf.setsampwidth(2)
-                    wf.setframerate(sample_rate)
-                    wf.writeframes(audio_data)
-            enable_speaker()
-            proc = subprocess.Popen([
-                "aplay", "-D", "plughw:0,0", wav_path
-            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            proc.wait()  # Wait for playback to finish
-        except Exception as e:
-            logger.error(f"Error playing audio: {e}")
-        finally:
-            disable_speaker()
-    import threading
-    threading.Thread(target=playback_thread, daemon=True).start()
+    try:
+        enable_speaker()
+        audio_array = np.frombuffer(audio_data, dtype=np.int16)
+        sd.play(audio_array, samplerate=sample_rate, blocking=True)
+    except Exception as e:
+        logger.error(f"Error playing audio: {e}")
+    finally:
+        disable_speaker()
 
 # Main CLI loop
 
