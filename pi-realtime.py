@@ -38,23 +38,24 @@ def disable_speaker():
 
 # Audio playback function for PCM16 audio from RealtimeClient
 
-def apply_volume(audio_array: np.ndarray, volume: float) -> np.ndarray:
+def normalize_audio(audio_array: np.ndarray) -> np.ndarray:
     """
-    Apply a volume boost to a numpy int16 array, with clipping.
+    Normalize a numpy int16 array so the loudest sample is at full scale (32767).
     """
-    if volume == 1.0:
+    max_val = np.max(np.abs(audio_array))
+    if max_val == 0:
         return audio_array
-    return np.clip(audio_array * volume, -32768, 32767).astype(np.int16)
+    return (audio_array * (32767.0 / max_val)).astype(np.int16)
 
-def play_pcm16_audio(audio_data: bytes, sample_rate=24000, volume=10.0):
+def play_pcm16_audio(audio_data: bytes, sample_rate=24000):
     """
-    Play PCM16 audio data through the Pi speaker using sounddevice, with volume boost.
+    Play PCM16 audio data through the Pi speaker using sounddevice, with normalization.
     """
     try:
         enable_speaker()
         audio_array = np.frombuffer(audio_data, dtype=np.int16)
-        boosted = apply_volume(audio_array, volume)
-        sd.play(boosted, samplerate=sample_rate, blocking=True)
+        normalized = normalize_audio(audio_array)
+        sd.play(normalized, samplerate=sample_rate, blocking=True)
     except Exception as e:
         logger.error(f"Error playing audio: {e}")
     finally:
