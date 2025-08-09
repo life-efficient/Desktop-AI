@@ -184,6 +184,7 @@ class PushToTalk:
         if key == keyboard.Key.space and not self.space_held:
             self.space_held = True
             print("Recording...")
+            self.client.clear_audio_buffer()  # Clear buffer before new input
             self.recording = True
             self.stream, self.t0 = self.record_and_stream()
 

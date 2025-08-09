@@ -393,6 +393,26 @@ class RealtimeClient:
             logger.error(f"Failed to commit audio buffer: {e}")
             return False
 
+    def clear_audio_buffer(self, event_id: Optional[str] = None):
+        """
+        Clear the input audio buffer before starting a new user input (when VAD is disabled).
+        """
+        if not self.ws:
+            logger.error("No WebSocket connection. Call connect_websocket() first.")
+            return False
+        try:
+            event = {
+                "type": "input_audio_buffer.clear"
+            }
+            if event_id:
+                event["event_id"] = event_id
+            self.ws.send(json.dumps(event))
+            logger.info("Cleared audio buffer.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to clear audio buffer: {e}")
+            return False
+
 
 def main():
     """
