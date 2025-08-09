@@ -20,8 +20,8 @@ class StreamingAudioInput:
 
     def _callback(self, indata, frames, t, status):
         chunk = indata.astype(np.int16).tobytes()
-        if hasattr(self.client, 'is_connected') and self.client.is_connected:
-            self.client.append_audio_buffer(chunk)
+        self.client.append_audio_buffer(chunk)
+        print('appended chunk')
 
     def start(self):
         """Start streaming audio to OpenAI."""
