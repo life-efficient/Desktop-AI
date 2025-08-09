@@ -11,6 +11,7 @@ from typing import Optional, Callable, Literal
 from dotenv import load_dotenv
 from logging_util import get_logger
 import threading
+import time
 
 # Load environment variables
 load_dotenv()
@@ -66,7 +67,14 @@ class RealtimeClient:
         self._ws_thread_running = False
         self.connect_websocket()
         self.start()
-
+        # Wait for connection to be established
+        timeout = 5  # seconds
+        start = time.time()
+        while not self.is_connected and (time.time() - start) < timeout:
+            time.sleep(0.05)
+        if not self.is_connected:
+            raise RuntimeError("Failed to establish WebSocket connection in RealtimeClient __init__")
+        
         # Validate audio playback function is provided when output_modality is audio
         if output_modality == "audio" and not audio_playback_func:
             logger.warning("output_modality is 'audio' but no audio_playback_func provided")

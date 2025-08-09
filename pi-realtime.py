@@ -195,11 +195,10 @@ def main():
     led = LEDPatternController(LED_PIN)
     LED_PATTERN = "pulse"
 
-    # Test WebSocket connection
+    # No need to call connect_websocket() or start(); client is ready
     print("\n1. Testing WebSocket connection...")
-    if client.connect_websocket():
+    if client.is_connected:
         print("✓ WebSocket connection established")
-        client.start()  # Start websocket receive loop in background
         if input_modality == 'audio':
             print("\nPush-to-Talk mode (button):")
             print("  - Hold button to talk (streaming)")

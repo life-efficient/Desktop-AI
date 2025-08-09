@@ -235,19 +235,22 @@ def main():
     # Create audio playback function
     audio_playback_func, audio_player = create_audio_playback_function()
     
+    # Initialize RealtimeClient with audio playback
     try:
         client = RealtimeClient(
-            audio_playback_func=audio_playback_func,
+            audio_playback_func=audio_player.play_audio,
             input_modality=input_modality,
             output_modality=output_modality
         )
         print(f"✓ RealtimeClient initialized with input: {input_modality}, output: {output_modality}")
     except Exception as e:
         print(f"✗ Failed to initialize RealtimeClient: {e}")
+        audio_player.stop()
         return
     
+    # No need to call connect_websocket() or start(); client is ready
     print("\n1. Testing WebSocket connection...")
-    if client.connect_websocket():
+    if client.is_connected:
         print("✓ WebSocket connection established")
         if input_modality == 'audio':
             print("\nPush-to-Talk mode:")
@@ -306,6 +309,7 @@ def main():
                 audio_player.stop()
     else:
         print("✗ Failed to establish WebSocket connection")
+        audio_player.stop()
     print("\n✓ All tests completed!")
 
 if __name__ == "__main__":
