@@ -75,6 +75,7 @@ class RealtimeClient:
         Args:
             data: The event data received from the WebSocket
         """
+        print(f"Handling event: {data}")
         event_type = data.get("type")
         
         if event_type == "response.done":
@@ -106,7 +107,7 @@ class RealtimeClient:
         elif event_type == "response.audio.delta":
             # Handle audio delta events - accumulate audio data (if output_modality includes audio)
             if self.output_modality == "audio":
-                audio_data = data.get("delta", {}).get("audio", "")
+                audio_data = data["delta"]
                 if audio_data:
                     try:
                         # Decode base64 audio data and add to buffer
