@@ -171,6 +171,7 @@ def main():
         output_modality = sys.argv[2].lower()
     print(f"Input modality: {input_modality}")
     print(f"Output modality: {output_modality}")
+    print('yo')
     
     hardware = Hardware()
     # Initialize RealtimeClient with audio playback
