@@ -89,7 +89,7 @@ class BufferedAudioInput:
             samplerate=48000,
             channels=1,
             dtype='int16',
-            blocksize=1024,
+            blocksize=4096,
             callback=self._callback
         )
         self.stream.start()
