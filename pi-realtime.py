@@ -16,6 +16,7 @@ import numpy as np
 import threading
 import time
 import sys
+from hardware import Hardware
 
 # LEDPatternController copied from main.py
 class LEDPatternController:
@@ -121,11 +122,12 @@ def normalize_audio(audio_array: np.ndarray) -> np.ndarray:
         return audio_array
     return (audio_array * (32767.0 / max_val)).astype(np.int16)
 
-def play_pcm16_audio(audio_data: bytes, sample_rate=24000):
+def play_pcm16_audio(audio_data: bytes, sample_rate=24000, hardware=None):
     """
     Play PCM16 audio data through the Pi speaker using aplay, and disable the speaker after playback.
     """
     def playback_thread():
+        import tempfile, wave, subprocess
         try:
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
                 wav_path = f.name
@@ -134,16 +136,19 @@ def play_pcm16_audio(audio_data: bytes, sample_rate=24000):
                     wf.setsampwidth(2)
                     wf.setframerate(sample_rate)
                     wf.writeframes(audio_data)
-            enable_speaker()
+            if hardware:
+                hardware.enable_speaker()
             proc = subprocess.Popen(
                 ["aplay", "-D", "plughw:0,0", wav_path],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
-            proc.wait()  # Wait for playback to finish
+            proc.wait()
         except Exception as e:
-            logger.error(f"Error playing audio: {e}")
+            print(f"Error playing audio: {e}")
         finally:
-            disable_speaker()
+            if hardware:
+                hardware.disable_speaker()
+    import threading
     threading.Thread(target=playback_thread, daemon=True).start()
 
 def record_and_stream(client):
@@ -169,17 +174,18 @@ def main():
     print(f"Input modality: {input_modality}")
     print(f"Output modality: {output_modality}")
     
+    hardware = Hardware()
     # Initialize RealtimeClient with audio playback
     try:
         client = RealtimeClient(
-            audio_playback_func=play_pcm16_audio,
+            audio_playback_func=lambda audio, sr=24000: play_pcm16_audio(audio, sr, hardware),
             input_modality=input_modality,
             output_modality=output_modality
         )
         print(f"✓ RealtimeClient initialized with input: {input_modality}, output: {output_modality}")
     except Exception as e:
         print(f"✗ Failed to initialize RealtimeClient: {e}")
-        GPIO.cleanup()
+        hardware.cleanup()
         return
     
     led = LEDPatternController(LED_PIN)
@@ -194,20 +200,17 @@ def main():
             print("  - Hold button to talk (streaming)")
             print("  - Release button to send (must hold >0.5s)")
             print("  - Ctrl+C to exit")
-            # (Assume BUTTON_PIN, LED_PIN, SPEAKER_SHUTDOWN_PIN, led, etc. are set up)
-            # (Assume LED_PATTERN is defined)
-            # (Assume led is initialized)
             stream = None
             button_was_down = False
             t0 = None
             try:
                 while True:
-                    button_is_down = GPIO.input(BUTTON_PIN) == GPIO.LOW
+                    button_is_down = hardware.button_pressed()
                     if button_is_down and not button_was_down:
                         # Button just pressed
                         client.clear_audio_buffer()
                         stream = record_and_stream(client)
-                        led.start(LED_PATTERN)
+                        hardware.led_on()
                         t0 = time.time()
                     elif not button_is_down and button_was_down:
                         # Button just released
@@ -215,7 +218,7 @@ def main():
                             stream.stop()
                             stream.close()
                             stream = None
-                        led.stop()
+                        hardware.led_off()
                         held_time = time.time() - t0 if t0 else 0
                         if held_time > 0.5:
                             client.commit_audio_buffer()
@@ -230,8 +233,7 @@ def main():
             finally:
                 print("\nClosing WebSocket connection...")
                 client.close_websocket()
-                led.cleanup()
-                GPIO.cleanup()
+                hardware.cleanup()
         else:
             print("\nText input mode:")
             print("  - Type your message and press Enter to send")
@@ -260,10 +262,10 @@ def main():
             finally:
                 print("\nClosing WebSocket connection...")
                 client.close_websocket()
-                GPIO.cleanup()
+                hardware.cleanup()
     else:
         print("✗ Failed to establish WebSocket connection")
-        GPIO.cleanup()
+        hardware.cleanup()
     print("\n✓ All tests completed!")
 
 if __name__ == "__main__":
