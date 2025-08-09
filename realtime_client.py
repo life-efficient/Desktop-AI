@@ -22,6 +22,13 @@ ModalityType = Literal["text", "audio"]
 class RealtimeClient:
     """
     Client for OpenAI's Realtime API using websockets.
+    
+    This client supports both text and audio modalities:
+    - Input modalities: "text" or "audio"
+    - Output modalities: "text" or "audio" (audio always includes text as well)
+    
+    Note: When output_modality is "audio", both text and audio responses are requested
+    from OpenAI, but only audio is played if audio_playback_func is provided.
     """
     
     def __init__(self, 
@@ -37,6 +44,7 @@ class RealtimeClient:
             audio_playback_func: Optional function for playing audio (should accept bytes)
             input_modality: Input modality - "text" or "audio" (default: "text")
             output_modality: Output modality - "text" or "audio" (default: "text")
+                          Note: "audio" will request both text and audio from OpenAI
         """
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
         if not self.api_key:
@@ -73,18 +81,17 @@ class RealtimeClient:
             response = data.get("response", {})
             output = response.get("output", [])
             
-            # Extract AI response text from the output (if output_modality is text)
-            if self.output_modality == "text":
-                for item in output:
-                    if item.get("type") == "message" and item.get("role") == "assistant":
-                        content = item.get("content", [])
-                        for content_item in content:
-                            if content_item.get("type") == "text":
-                                ai_response = content_item.get("text", "")
-                                if ai_response:
-                                    print(f"\nAI: {ai_response}\n")
-                                    logger.info(f"AI Response: {ai_response}")
-                                break
+            # Extract AI response text from the output (always show text if available)
+            for item in output:
+                if item.get("type") == "message" and item.get("role") == "assistant":
+                    content = item.get("content", [])
+                    for content_item in content:
+                        if content_item.get("type") == "text":
+                            ai_response = content_item.get("text", "")
+                            if ai_response:
+                                print(f"\nAI: {ai_response}\n")
+                                logger.info(f"AI Response: {ai_response}")
+                            break
             
             # Play accumulated audio if available and output_modality is audio
             if self.output_modality == "audio" and self.audio_buffer and self.audio_playback_func:
@@ -97,7 +104,7 @@ class RealtimeClient:
                     self.audio_buffer.clear()
         
         elif event_type == "response.audio.delta":
-            # Handle audio delta events - accumulate audio data (only if output_modality is audio)
+            # Handle audio delta events - accumulate audio data (if output_modality includes audio)
             if self.output_modality == "audio":
                 audio_data = data.get("delta", {}).get("audio", "")
                 if audio_data:
@@ -287,7 +294,9 @@ class RealtimeClient:
         Trigger a response creation from the model.
         
         Args:
-            modalities: List of modalities for the response (defaults to output_modality)
+            modalities: List of modalities for the response. If None, uses output_modality:
+                       - "text": requests ["text"]
+                       - "audio": requests ["text", "audio"] (text is always included)
             
         Returns:
             bool: True if response creation triggered successfully, False otherwise
@@ -296,9 +305,12 @@ class RealtimeClient:
             logger.error("No WebSocket connection. Call connect_websocket() first.")
             return False
         
-        # Use output_modality if no modalities specified
+        # Always include text modality, optionally add audio
         if modalities is None:
-            modalities = [self.output_modality]
+            if self.output_modality == "audio":
+                modalities = ["text", "audio"]
+            else:
+                modalities = ["text"]
         
         try:
             event = {
