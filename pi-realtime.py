@@ -52,6 +52,7 @@ def play_pcm16_audio(audio_data: bytes, sample_rate=24000):
         subprocess.Popen([
             "aplay", "-D", "plughw:0,0", wav_path
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        disable_speaker()
     except Exception as e:
         logger.error(f"Error playing audio: {e}")
         disable_speaker()
