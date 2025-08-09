@@ -13,6 +13,8 @@ from realtime_client import RealtimeClient
 from logging_util import get_logger
 import sounddevice as sd
 import numpy as np
+import threading
+import time
 
 logger = get_logger(__name__)
 
@@ -102,8 +104,6 @@ def main():
         print("  - Audio responses will be played automatically")
         print("-" * 50)
         
-        import threading
-        import time
         
         def run_websocket():
             client.run_websocket()
