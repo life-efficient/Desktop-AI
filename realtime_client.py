@@ -36,6 +36,55 @@ class RealtimeClient:
         
         logger.info("RealtimeClient initialized")
     
+    def handle_event(self, data: dict):
+        """
+        Handle specific types of events with if/else blocks.
+        
+        Args:
+            data: The event data received from the WebSocket
+        """
+        event_type = data.get("type")
+        
+        if event_type == "response.done":
+            response = data.get("response", {})
+            output = response.get("output", [])
+            
+            # Extract AI response text from the output
+            for item in output:
+                if item.get("type") == "message" and item.get("role") == "assistant":
+                    content = item.get("content", [])
+                    for content_item in content:
+                        if content_item.get("type") == "text":
+                            ai_response = content_item.get("text", "")
+                            if ai_response:
+                                print(f"\nAI: {ai_response}\n")
+                                logger.info(f"AI Response: {ai_response}")
+                            break
+        
+        elif event_type == "conversation.item.create":
+            item = data.get("item", {})
+            if item.get("type") == "message" and item.get("role") == "user":
+                content = item.get("content", [])
+                for content_item in content:
+                    if content_item.get("type") == "input_text":
+                        user_text = content_item.get("text", "")
+                        if user_text:
+                            logger.info(f"User message received: {user_text}")
+        
+        elif event_type == "response.create":
+            response = data.get("response", {})
+            modalities = response.get("modalities", [])
+            logger.info(f"Response creation triggered with modalities: {modalities}")
+        
+        elif event_type == "error":
+            error = data.get("error", {})
+            error_message = error.get("message", "Unknown error")
+            logger.error(f"Error event received: {error_message}")
+        
+        else:
+            # Dump the entire event for unknown types
+            logger.info(f"Unknown event type '{event_type}': {json.dumps(data, indent=2)}")
+
     def connect_websocket(self, model: str = "gpt-4o-realtime-preview-2024-12-17", on_message: Optional[Callable] = None, on_open: Optional[Callable] = None):
         """
         Connect to the realtime WebSocket for listening to events.
@@ -63,25 +112,8 @@ class RealtimeClient:
         def default_on_message(ws, message):
             try:
                 data = json.loads(message)
-                logger.info(f"Received event: {json.dumps(data, indent=2)}")
-                
-                # Handle response.done events specifically
-                if data.get("type") == "response.done":
-                    response = data.get("response", {})
-                    output = response.get("output", [])
-                    
-                    # Extract AI response text from the output
-                    for item in output:
-                        if item.get("type") == "message" and item.get("role") == "assistant":
-                            content = item.get("content", [])
-                            for content_item in content:
-                                if content_item.get("type") == "text":
-                                    ai_response = content_item.get("text", "")
-                                    if ai_response:
-                                        print(f"\nAI: {ai_response}\n")
-                                        logger.info(f"AI Response: {ai_response}")
-                                    break
-                
+                # Use the handle_event method to process the event
+                self.handle_event(data)
                 if on_message:
                     on_message(ws, data)
             except json.JSONDecodeError as e:
