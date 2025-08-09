@@ -17,10 +17,12 @@ class StreamingAudioInput:
         self.blocksize = blocksize
         self.stream = None
         self.running = False
+
     def _callback(self, indata, frames, t, status):
         chunk = indata.astype(np.int16).tobytes()
         if hasattr(self.client, 'is_connected') and self.client.is_connected:
             self.client.append_audio_buffer(chunk)
+
     def start(self):
         """Start streaming audio to OpenAI."""
         if self.stream is not None:
@@ -34,6 +36,7 @@ class StreamingAudioInput:
         )
         self.stream.start()
         self.running = True
+
     def stop(self):
         """Stop streaming audio."""
         if self.stream is not None:
@@ -41,6 +44,7 @@ class StreamingAudioInput:
             self.stream.close()
             self.stream = None
             self.running = False
+
     def send(self):
         """No-op for streaming input (audio is sent in real time)."""
         pass
@@ -62,6 +66,7 @@ class BufferedAudioInput:
         self.stream = None
         self.frames = []
         self.running = False
+
     def start(self):
         """Start recording audio to buffer."""
         if self.stream is not None:
@@ -75,6 +80,7 @@ class BufferedAudioInput:
         )
         self.stream.start()
         self.running = True
+
     def stop(self):
         """Stop recording audio."""
         if self.stream is not None:
@@ -87,6 +93,7 @@ class BufferedAudioInput:
             self.stream.close()
             self.stream = None
             self.running = False
+
     def send(self):
         """Send the full audio buffer to OpenAI using client.send_audio_message()."""
         if self.frames:
