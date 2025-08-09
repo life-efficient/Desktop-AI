@@ -19,6 +19,10 @@ import sys
 from hardware import Hardware
 from audio_input import StreamingAudioInput, BufferedAudioInput
 
+from scipy.io.wavfile import write
+from pathlib import Path
+import base64
+
 # LEDPatternController copied from main.py
 class LEDPatternController:
     """Controls LED patterns using PWM"""
@@ -192,21 +196,43 @@ def main():
             audio_input = None
             button_was_down = False
             t0 = None
+            recording = []
+            stream = None
             try:
                 while True:
                     button_is_down = hardware.button_pressed()
                     if button_is_down and not button_was_down: # button pressed
                         logger.info("Button pressed. Starting audio stream and clearing buffer.")
-                        client.clear_audio_buffer()
-                        audio_input = BufferedAudioInput(client)
-                        audio_input.start()
+                        client.clear_audio_buffer() # TODO move to start method
+                        # audio_input = BufferedAudioInput(client)
+                        # audio_input.start()
                         hardware.led_on()
                         t0 = time.time()
+
+                        # temp solution
+                        recording = []
+                        stream = sd.InputStream(samplerate=48000, channels=1, dtype='int16')
+                        stream.start()
+
                     elif not button_is_down and button_was_down: # button released
                         logger.info("Button released. Stopping audio stream.")
-                        if audio_input:
-                            audio_input.stop()
-                            audio_input = None
+
+                        # temp solution
+                        stream.stop()
+                        stream.close()
+                        stream = None
+                        audio = np.concatenate(recording, axis=0)
+                        RECORDING_FILE = Path("/tmp/recording.wav")
+                        write(RECORDING_FILE, 48000, audio)
+                        # read as b64
+                        with open(RECORDING_FILE, "rb") as f:
+                            audio_data = f.read()
+                            encoded_audio = base64.b64encode(audio_data).decode('utf-8')
+                            client.send_full_audio(encoded_audio)
+
+                        # if audio_input:
+                        #     audio_input.stop()
+                        #     audio_input = None
                         hardware.led_off()
                         held_time = time.time() - t0 if t0 else 0
                         if held_time > 0.5:
@@ -215,8 +241,13 @@ def main():
                             logger.info("Button press too short, ignoring.")
                             print("Button press too short, ignoring.")
                     # Add this: collect frames while button is held and audio_input is active
-                    if button_is_down and audio_input is not None:
-                        audio_input.read_frame()
+                    # if button_is_down and audio_input is not None:
+                    #     audio_input.read_frame()
+
+                    if stream:
+                        frame, _ = stream.read(1024)
+                        recording.append(frame)
+
                     button_was_down = button_is_down
                     time.sleep(0.01)
             except KeyboardInterrupt:
