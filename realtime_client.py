@@ -78,7 +78,7 @@ class RealtimeClient:
                                 if content_item.get("type") == "text":
                                     ai_response = content_item.get("text", "")
                                     if ai_response:
-                                        print(f"\n🤖 AI: {ai_response}\n")
+                                        print(f"\nAI: {ai_response}\n")
                                         logger.info(f"AI Response: {ai_response}")
                                     break
                 
