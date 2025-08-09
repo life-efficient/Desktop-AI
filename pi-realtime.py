@@ -214,6 +214,9 @@ def main():
                         else:
                             logger.info("Button press too short, ignoring.")
                             print("Button press too short, ignoring.")
+                    # Add this: collect frames while button is held and audio_input is active
+                    if button_is_down and audio_input is not None:
+                        audio_input.read_frame()
                     button_was_down = button_is_down
                     time.sleep(0.01)
             except KeyboardInterrupt:
