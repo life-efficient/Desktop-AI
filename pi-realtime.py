@@ -30,7 +30,7 @@ class LEDPatternController:
         self.pin = pin
         self.pwm_freq = pwm_freq
         self.pwm = None
-        self.pattern = "solid"
+        self.pattern = "pulse"
         self.running = False
         self.thread = None
     def _setup_pwm(self):
