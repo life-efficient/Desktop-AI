@@ -64,10 +64,11 @@ class StreamingAudioInput:
 class BufferedAudioInput:
     """
     Records audio to a buffer and sends the full stream to OpenAI after completion.
-    On stop(), sends the full audio buffer as a single message.
+    On stop(), sends the full audio buffer as a single message and clears the buffer.
     Usage:
         b = BufferedAudioInput(client)
         b.start()
+        # Collect frames in your main loop using b.read_frame()
         ...
         b.stop()  # Sends the full audio buffer
     """
@@ -77,7 +78,6 @@ class BufferedAudioInput:
         self.blocksize = blocksize
         self.stream = None
         self.frames = []
-        self.running = False
 
     def start(self):
         print("[BufferedAudioInput.start] Starting audio stream")
@@ -92,22 +92,21 @@ class BufferedAudioInput:
             blocksize=self.blocksize
         )
         self.stream.start()
-        self.running = True
         print("[BufferedAudioInput.start] Stream started")
+
+    def read_frame(self):
+        """Read a frame from the stream and append to buffer. Call this in your main loop while recording."""
+        if self.stream is not None:
+            frame, _ = self.stream.read(self.blocksize)
+            print(f"[BufferedAudioInput.read_frame] Read {len(frame)} samples")
+            self.frames.append(frame)
 
     def stop(self):
         print("[BufferedAudioInput.stop] Stopping audio stream")
         if self.stream is not None:
-            while True:
-                frame, _ = self.stream.read(self.blocksize)
-                print(f"[BufferedAudioInput.stop] Read {len(frame)} samples")
-                self.frames.append(frame)
-                if not self.running:
-                    break
             self.stream.stop()
             self.stream.close()
             self.stream = None
-            self.running = False
             print("[BufferedAudioInput.stop] Stream stopped, calling _send()")
             self._send()
         else:
@@ -120,5 +119,6 @@ class BufferedAudioInput:
             print(f"[BufferedAudioInput._send] Sending {audio.nbytes} bytes")
             self.client.send_full_audio(audio.tobytes())
             self.client.create_response()
+            self.frames = []
         else:
             print("[BufferedAudioInput._send] No frames to send")
