@@ -106,11 +106,35 @@ class BufferedAudioInput:
         else:
             print("[BufferedAudioInput.stop] Stream already stopped")
 
+    @staticmethod
+    def save_audio(audio, samplerate=48000):
+        import tempfile
+        from scipy.io.wavfile import write
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+            wav_path = f.name
+            write(wav_path, samplerate, audio)
+        print(f"[BufferedAudioInput.save_audio] Saved audio to {wav_path}")
+        return wav_path
+
+    @staticmethod
+    def play_audio(wav_path):
+        import subprocess
+        print(f"[BufferedAudioInput.play_audio] Playing audio from {wav_path}")
+        try:
+            proc = subprocess.Popen([
+                "aplay", "-D", "plughw:0,0", wav_path
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            proc.wait()
+        except Exception as e:
+            print(f"[BufferedAudioInput.play_audio] Error playing back audio: {e}")
+
     def _send(self):
         print("[BufferedAudioInput._send] Sending full audio buffer to OpenAI")
         if self.frames:
             audio = np.concatenate(self.frames, axis=0).flatten()
             print(f"[BufferedAudioInput._send] Sending {audio.nbytes} bytes")
+            wav_path = self.save_audio(audio, 48000)
+            self.play_audio(wav_path)
             self.client.send_full_audio(audio.tobytes())
             self.client.create_response()
             self.frames = []
