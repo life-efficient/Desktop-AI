@@ -103,3 +103,4 @@ class BufferedAudioInput:
         if self.frames:
             audio = np.concatenate(self.frames, axis=0)
             self.client.send_full_audio(audio.tobytes())
+            self.client.create_response()
