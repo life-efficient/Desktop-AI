@@ -195,14 +195,14 @@ def main():
             try:
                 while True:
                     button_is_down = hardware.button_pressed()
-                    if button_is_down and not button_was_down:
+                    if button_is_down and not button_was_down: # button pressed
                         logger.info("Button pressed. Starting audio stream and clearing buffer.")
                         client.clear_audio_buffer()
                         audio_input = BufferedAudioInput(client)
                         audio_input.start()
                         hardware.led_on()
                         t0 = time.time()
-                    elif not button_is_down and button_was_down:
+                    elif not button_is_down and button_was_down: # button released
                         logger.info("Button released. Stopping audio stream.")
                         if audio_input:
                             audio_input.stop()
