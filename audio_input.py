@@ -68,7 +68,7 @@ class BufferedAudioInput:
     Usage:
         b = BufferedAudioInput(client)
         b.start()
-        # Collect frames in your main loop using b.read_frame()
+        # Recording happens automatically via callback
         ...
         b.stop()  # Sends the full audio buffer
     """
@@ -78,6 +78,10 @@ class BufferedAudioInput:
         self.blocksize = blocksize
         self.stream = None
         self.frames = []
+
+    def _callback(self, indata, frames, t, status):
+        print(f"[BufferedAudioInput._callback] Called with {frames} frames")
+        self.frames.append(indata.copy())
 
     def start(self):
         print("[BufferedAudioInput.start] Starting audio stream")
@@ -89,17 +93,11 @@ class BufferedAudioInput:
             samplerate=self.samplerate,
             channels=1,
             dtype='int16',
-            blocksize=self.blocksize
+            blocksize=self.blocksize,
+            callback=self._callback
         )
         self.stream.start()
         print("[BufferedAudioInput.start] Stream started")
-
-    def read_frame(self):
-        """Read a frame from the stream and append to buffer. Call this in your main loop while recording."""
-        if self.stream is not None:
-            frame, _ = self.stream.read(self.blocksize)
-            print(f"[BufferedAudioInput.read_frame] Read {len(frame)} samples")
-            self.frames.append(frame)
 
     def stop(self):
         print("[BufferedAudioInput.stop] Stopping audio stream")
