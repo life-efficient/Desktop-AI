@@ -15,6 +15,7 @@ import sounddevice as sd
 import numpy as np
 import threading
 import time
+import sys
 
 logger = get_logger(__name__)
 
@@ -74,20 +75,37 @@ def play_pcm16_audio(audio_data: bytes, sample_rate=24000):
             disable_speaker()
     threading.Thread(target=playback_thread, daemon=True).start()
 
+def record_and_stream(client):
+    def callback(indata, frames, t, status):
+        chunk = indata.astype(np.int16).tobytes()
+        client.append_audio_buffer(chunk)
+    stream = sd.InputStream(
+        samplerate=24000, channels=1, dtype='int16', callback=callback, blocksize=1024
+    )
+    stream.start()
+    return stream
+
 # Main CLI loop
 
 def main():
-    print("Raspberry Pi Realtime Client with Audio")
-    print("=" * 30)
+    # Parse command-line arguments for input/output modalities
+    input_modality = 'audio'
+    output_modality = 'audio'
+    if len(sys.argv) > 1:
+        input_modality = sys.argv[1].lower()
+    if len(sys.argv) > 2:
+        output_modality = sys.argv[2].lower()
+    print(f"Input modality: {input_modality}")
+    print(f"Output modality: {output_modality}")
     
     # Initialize RealtimeClient with audio playback
     try:
         client = RealtimeClient(
             audio_playback_func=play_pcm16_audio,
-            input_modality="text",
-            output_modality="audio"
+            input_modality=input_modality,
+            output_modality=output_modality
         )
-        print("✓ RealtimeClient initialized with text input and audio output")
+        print(f"✓ RealtimeClient initialized with input: {input_modality}, output: {output_modality}")
     except Exception as e:
         print(f"✗ Failed to initialize RealtimeClient: {e}")
         GPIO.cleanup()
@@ -97,43 +115,77 @@ def main():
     print("\n1. Testing WebSocket connection...")
     if client.connect_websocket():
         print("✓ WebSocket connection established")
-        print(f"\nInteractive messaging mode (input: {client.input_modality}, output: {client.output_modality}):")
-        print("  - Type your messages and press Enter to send")
-        print("  - Type 'quit' or 'exit' to stop")
-        print("  - Press Ctrl+C to stop the WebSocket connection")
-        print("  - Audio responses will be played automatically")
-        print("-" * 50)
-        
-        
-        def run_websocket():
-            client.run_websocket()
-        
-        ws_thread = threading.Thread(target=run_websocket, daemon=True)
-        ws_thread.start()
-        time.sleep(1)
-        
-        # Text input loop
-        try:
-            while True:
-                user_input = input("\nYou: ").strip()
-                if user_input.lower() in ['quit', 'exit', 'q']:
-                    print("Ending conversation...")
-                    break
-                if not user_input:
-                    continue
-                if client.send_text_message(user_input):
-                    print("✓ Message sent")
-                else:
-                    print("✗ Failed to send message")
-        except KeyboardInterrupt:
-            print("\nInterrupted by user. Ending conversation...")
-        except EOFError:
-            print("\nEnd of input. Ending conversation...")
-        finally:
-            print("\nClosing WebSocket connection...")
-            client.close_websocket()
-            disable_speaker()
-            GPIO.cleanup()
+        if input_modality == 'audio':
+            print("\nPush-to-Talk mode (button):")
+            print("  - Hold button to talk (streaming)")
+            print("  - Release button to send (must hold >0.5s)")
+            print("  - Ctrl+C to exit")
+            # (Assume BUTTON_PIN, LED_PIN, SPEAKER_SHUTDOWN_PIN, led, etc. are set up)
+            # (Assume LED_PATTERN is defined)
+            # (Assume led is initialized)
+            stream = None
+            button_was_down = False
+            t0 = None
+            try:
+                while True:
+                    button_is_down = GPIO.input(BUTTON_PIN) == GPIO.LOW
+                    if button_is_down and not button_was_down:
+                        # Button just pressed
+                        client.clear_audio_buffer()
+                        stream = record_and_stream(client)
+                        # (Assume led.start(LED_PATTERN) is called)
+                        t0 = time.time()
+                    elif not button_is_down and button_was_down:
+                        # Button just released
+                        if stream:
+                            stream.stop()
+                            stream.close()
+                            stream = None
+                        # (Assume led.stop() is called)
+                        held_time = time.time() - t0 if t0 else 0
+                        if held_time > 0.5:
+                            client.commit_audio_buffer()
+                            client.create_response()
+                            print("✓ Sent audio input and requested response.")
+                        else:
+                            print("Button press too short, ignoring.")
+                    button_was_down = button_is_down
+                    time.sleep(0.01)
+            except KeyboardInterrupt:
+                print("\nInterrupted by user. Ending conversation...")
+            finally:
+                print("\nClosing WebSocket connection...")
+                client.close_websocket()
+                GPIO.cleanup()
+        else:
+            print("\nText input mode:")
+            print("  - Type your message and press Enter to send")
+            print("  - Type 'quit' or 'exit' to stop")
+            print("  - Ctrl+C to exit")
+            import threading
+            def run_websocket():
+                client.run_websocket()
+            ws_thread = threading.Thread(target=run_websocket, daemon=True)
+            ws_thread.start()
+            time.sleep(1)
+            try:
+                while True:
+                    user_input = input("\nYou: ").strip()
+                    if user_input.lower() in ['quit', 'exit', 'q']:
+                        print("Ending conversation...")
+                        break
+                    if not user_input:
+                        continue
+                    if client.send_text_message(user_input):
+                        print("✓ Message sent")
+                    else:
+                        print("✗ Failed to send message")
+            except KeyboardInterrupt:
+                print("\nInterrupted by user. Ending conversation...")
+            finally:
+                print("\nClosing WebSocket connection...")
+                client.close_websocket()
+                GPIO.cleanup()
     else:
         print("✗ Failed to establish WebSocket connection")
         GPIO.cleanup()
